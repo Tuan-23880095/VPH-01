@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" aria-hidden="true" role="img" class="iconify iconify--logos" width="32" height="32" preserveAspectRatio="xMidYMid meet" viewBox="0 0 256 256">
+    <path fill="#FFC61E" d="M128.003 40.063l68.736 122.99l-68.736 67.245l-68.736-67.245z"></path>
+    <path fill="#BD34FE" d="M225.433 34.195l-97.43 196.103L249.27 101.99z"></path>
+    <path fill="#41D1FF" d="M30.567 34.195l97.43 196.103L6.73 101.99z"></path>
+    <defs>
+        <linearGradient id="IconifyId1813088fe1fbc01fb466" x1="-0.003" x2="0.003" y1="0.005" y2="0.992">
+            <stop offset="0" stop-color="#41D1FF"></stop>
+            <stop offset="1" stop-color="#BD34FE"></stop>
+        </linearGradient>
+        <linearGradient id="IconifyId1813088fe1fbc01fb467" x1="-0.003" x2="0.003" y1="0.005" y2="0.992">
+            <stop offset="0" stop-color="#FFEA83"></stop>
+            <stop offset="0.083" stop-color="#FFDD35"></stop>
+            <stop offset="1" stop-color="#FFA800"></stop>
+        </linearGradient>
+    </defs>
+</svg>
