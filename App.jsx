@@ -538,7 +538,7 @@ export default function App() {
             <Link size={16} className="text-gray-500" />
             <input 
               type="text" 
-              placeholder="Dán URL Web App (Script)..." 
+              placeholder="https://script.google.com/macros/s/AKfycbxBPRlkjpMLDctdm2Uk7aYex_P6Cx0uhIdUmwOcYEm9C7JDe5OH92FiWEn6Nz1HNenY-A/exec" 
               className="text-sm border border-gray-300 rounded px-2 py-1.5 w-full md:w-64"
               value={scriptUrl}
               onChange={(e) => setScriptUrl(e.target.value)}
