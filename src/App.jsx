@@ -3,7 +3,7 @@ import {
   Users, CheckSquare, Trophy, BookOpen, BarChart2, 
   Play, Pause, RotateCcw, HelpCircle, Layout, Globe, 
   CloudLightning, Link, Loader, Save, CheckCircle, AlertCircle, Calendar,
-  UserCircle, ExchangeAlt, UsersCog, ChalkboardTeacher, Info, FileSpreadsheet
+  User, Repeat, Monitor, Info, FileText
 } from 'lucide-react';
 
 // --- Components ---
@@ -437,6 +437,13 @@ export default function App() {
 
   // --- ACTIONS ĐÁNH GIÁ CHÉO ---
   const handleScoreChange = (tab, key, val) => {
+      if (val === '') {
+          setEvaluationScores(prev => ({
+              ...prev, [tab]: { ...prev[tab], [key]: '' }
+          }));
+          return;
+      }
+
       let numVal = parseFloat(val);
       if(isNaN(numVal)) numVal = 0;
       if(numVal > 2.5) numVal = 2.5;
@@ -455,7 +462,7 @@ export default function App() {
       const criteriaList = tab === 'lecturer' ? lecturerCriteria : leaderCriteria;
       let total = 0;
       for (let c = 0; c < criteriaList.length; c++) {
-          total += (evaluationScores[tab]?.[`m_${studentIdx}_c_${c}`] || 0);
+          total += (parseFloat(evaluationScores[tab]?.[`m_${studentIdx}_c_${c}`]) || 0);
       }
       return total.toFixed(1);
   };
@@ -756,16 +763,16 @@ export default function App() {
             {/* Peer Review Navigation Tabs */}
             <div className="flex border-b text-sm md:text-base font-medium overflow-x-auto">
                 <button onClick={() => setPeerRole('member')} className={`flex-1 py-3 px-4 text-center whitespace-nowrap border-b-2 flex items-center justify-center gap-2 ${peerRole === 'member' ? 'border-blue-600 text-blue-700 bg-white' : 'border-transparent text-gray-500 bg-gray-50 hover:bg-gray-100'}`}>
-                    <UserCircle size={18}/> Tự Đánh Giá
+                    <User size={18}/> Tự Đánh Giá
                 </button>
                 <button onClick={() => setPeerRole('peer')} className={`flex-1 py-3 px-4 text-center whitespace-nowrap border-b-2 flex items-center justify-center gap-2 ${peerRole === 'peer' ? 'border-blue-600 text-blue-700 bg-white' : 'border-transparent text-gray-500 bg-gray-50 hover:bg-gray-100'}`}>
-                    <ExchangeAlt size={18}/> Đánh Giá Chéo
+                    <Repeat size={18}/> Đánh Giá Chéo
                 </button>
                 <button onClick={() => setPeerRole('leader')} className={`flex-1 py-3 px-4 text-center whitespace-nowrap border-b-2 flex items-center justify-center gap-2 ${peerRole === 'leader' ? 'border-blue-600 text-blue-700 bg-white' : 'border-transparent text-gray-500 bg-gray-50 hover:bg-gray-100'}`}>
-                    <UsersCog size={18}/> Nhóm Trưởng
+                    <Users size={18}/> Nhóm Trưởng
                 </button>
                 <button onClick={() => setPeerRole('lecturer')} className={`flex-1 py-3 px-4 text-center whitespace-nowrap border-b-2 flex items-center justify-center gap-2 ${peerRole === 'lecturer' ? 'border-blue-600 text-blue-700 bg-white' : 'border-transparent text-gray-500 bg-gray-50 hover:bg-gray-100'}`}>
-                    <ChalkboardTeacher size={18}/> Giảng Viên
+                    <Monitor size={18}/> Giảng Viên
                 </button>
             </div>
 
@@ -794,7 +801,7 @@ export default function App() {
                                     <label className="text-xs font-bold text-blue-800 uppercase mr-3">Điểm:</label>
                                     <input 
                                         type="number" step="0.5" min="0" max="2.5" 
-                                        value={evaluationScores.member[`crit_${index}`] || ''}
+                                        value={evaluationScores.member[`crit_${index}`] ?? ''}
                                         onChange={(e) => handleScoreChange('member', `crit_${index}`, e.target.value)}
                                         className="w-20 p-2 border rounded focus:border-blue-500 outline-none text-center font-bold text-lg text-blue-900 bg-white" 
                                         placeholder="0.0"
@@ -834,7 +841,7 @@ export default function App() {
                                                 <td key={sIdx} className="p-1 text-center border-l border-gray-100">
                                                     <input 
                                                         type="number" step="0.5" min="0" max="2.5" 
-                                                        value={evaluationScores[peerRole]?.[`m_${sIdx}_c_${cIdx}`] || ''}
+                                                        value={evaluationScores[peerRole]?.[`m_${sIdx}_c_${cIdx}`] ?? ''}
                                                         onChange={(e) => handleScoreChange(peerRole, `m_${sIdx}_c_${cIdx}`, e.target.value)}
                                                         className="w-full p-2 text-center text-sm rounded bg-gray-50 hover:bg-blue-50 focus:bg-white border border-transparent focus:border-blue-300 outline-none font-bold text-gray-700" 
                                                     />
@@ -948,7 +955,7 @@ export default function App() {
           </button>
 
           <button onClick={() => setActiveTab('peerReview')} className={`px-4 py-2.5 rounded-full font-medium text-sm flex items-center gap-2 transition-colors ${activeTab === 'peerReview' ? 'bg-purple-600 text-white shadow-md' : 'bg-white text-gray-600 hover:bg-gray-200'}`}>
-            <FileSpreadsheet size={16}/> Đánh Giá Chéo
+            <FileText size={16}/> Đánh Giá Chéo
           </button>
         </div>
 
