@@ -155,6 +155,7 @@ export default function App() {
   // Google Sheet Integration
   const [scriptUrl, setScriptUrl] = useState(() => localStorage.getItem('GEO_CLASS_SCRIPT_URL') || '');
   const [lastSyncStatus, setLastSyncStatus] = useState(null); 
+  const [isSyncingAll, setIsSyncingAll] = useState(false);
 
   useEffect(() => {
     localStorage.setItem('GEO_CLASS_SCRIPT_URL', scriptUrl);
@@ -204,7 +205,7 @@ export default function App() {
     return ((s.attendance + s.discussion + s.groupReport + s.regular + (s.midterm * 2)) / 6).toFixed(1);
   };
 
-  // --- HÀM GỬI DỮ LIỆU LÊN GOOGLE SHEET ---
+  // --- HÀM GỬI DỮ LIỆU ĐƠN LẺ LÊN GOOGLE SHEET (Tự động lưu) ---
   const sendStudentData = useCallback(async (student) => {
     if (!scriptUrl) return;
 
@@ -238,6 +239,55 @@ export default function App() {
       setLastSyncStatus("Lỗi kết nối!");
     }
   }, [scriptUrl]);
+
+  // --- HÀM ĐỒNG BỘ TOÀN BỘ (Thủ công) ---
+  const handleSyncAll = async () => {
+    if (!scriptUrl) {
+      setLastSyncStatus("Vui lòng nhập URL Web App (Script) trước!");
+      setTimeout(() => setLastSyncStatus(null), 3000);
+      return;
+    }
+
+    setIsSyncingAll(true);
+    setLastSyncStatus("Đang đồng bộ toàn bộ lớp học...");
+
+    try {
+      const promises = students.map(student => {
+        const payload = {
+          role: "Đồng bộ Toàn lớp",
+          evaluator: "ThS. Đinh Quốc Tuấn",
+          groupName: `${student.name} (${student.code})`,
+          comment: "Cập nhật đồng loạt",
+          headers: ["MSSV", "Nhóm", "Chuyên cần (10%)", "Thảo luận (10%)", "Báo cáo (10%)", "Thường xuyên (10%)", "Giữa kỳ (20%)", "Điểm Quá Trình (Hệ 10)"],
+          scores: [
+            student.code, 
+            `Nhóm ${student.group}`, 
+            student.attendance, 
+            student.discussion, 
+            student.groupReport, 
+            student.regular, 
+            student.midterm,
+            calculateProcessScore(student)
+          ]
+        };
+
+        return fetch(scriptUrl, {
+          method: 'POST', mode: 'no-cors',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        });
+      });
+
+      await Promise.all(promises);
+      setLastSyncStatus(`Đã đồng bộ thành công ${students.length} sinh viên!`);
+    } catch (error) {
+      console.error(error);
+      setLastSyncStatus("Có lỗi xảy ra khi đồng bộ!");
+    } finally {
+      setIsSyncingAll(false);
+      setTimeout(() => setLastSyncStatus(null), 4000);
+    }
+  };
 
   // --- ACTIONS ---
 
@@ -299,9 +349,9 @@ export default function App() {
   const renderStatusToast = () => {
     if (!lastSyncStatus) return null;
     return (
-      <div className="fixed bottom-4 right-4 bg-gray-800 text-white px-4 py-2 rounded-lg shadow-lg flex items-center gap-2 animate-fade-in z-50">
-        <CloudLightning size={16} className="text-yellow-400"/>
-        {lastSyncStatus}
+      <div className="fixed bottom-4 right-4 bg-gray-900 text-white px-4 py-3 rounded-lg shadow-xl flex items-center gap-3 animate-fade-in z-50 border border-gray-700">
+        <CloudLightning size={20} className="text-yellow-400"/>
+        <span className="font-medium">{lastSyncStatus}</span>
       </div>
     );
   };
@@ -387,20 +437,20 @@ export default function App() {
     </div>
   );
 
-  // GIAO DIỆN ĐIỂM DANH MỚI ĐƯỢC THÊM LẠI
   const renderAttendance = () => (
     <Card className="p-6">
       <div className="flex justify-between items-center mb-6">
         <h2 className="text-xl font-bold flex items-center gap-2"><CheckSquare/> Điểm danh Nhanh (10%)</h2>
-        <Button onClick={() => {
-          // Chỉ set điểm toàn bộ, không bắn API tự động để tránh quá tải
-          const updated = students.map(s => ({...s, attendance: 10}));
-          setStudents(updated);
-          setLastSyncStatus("Đã reset Có mặt tất cả (Sẽ đồng bộ khi có thay đổi)");
-          setTimeout(() => setLastSyncStatus(null), 3000);
-        }}>
-          Có mặt tất cả
-        </Button>
+        <div className="flex gap-2">
+          <Button onClick={() => {
+            const updated = students.map(s => ({...s, attendance: 10}));
+            setStudents(updated);
+            setLastSyncStatus("Đã đánh dấu Có mặt tất cả (Nhớ bấm nút Đồng bộ)");
+            setTimeout(() => setLastSyncStatus(null), 3000);
+          }}>
+            Có mặt tất cả
+          </Button>
+        </div>
       </div>
       <div className="overflow-x-auto">
         <table className="w-full text-left border-collapse">
@@ -449,7 +499,7 @@ export default function App() {
       <div className="flex justify-between items-center mb-6">
         <h2 className="text-xl font-bold flex items-center gap-2"><Trophy/> Bảng Điểm Quá Trình (60%)</h2>
         <div className="text-sm bg-gray-100 px-3 py-1 rounded-full text-gray-600 font-medium">
-          Tự động đồng bộ Google Sheet
+          Dữ liệu sẽ được tự động lưu khi chỉnh sửa
         </div>
       </div>
       
@@ -523,9 +573,9 @@ export default function App() {
             </div>
           </div>
           
-          <div className="flex items-center gap-4">
+          <div className="flex items-center gap-3">
              {/* Dropdown Chọn Buổi Học */}
-             <div className="flex items-center bg-blue-50 border border-blue-200 rounded-lg px-2 py-1">
+             <div className="hidden sm:flex items-center bg-blue-50 border border-blue-200 rounded-lg px-2 py-1">
                 <Calendar size={16} className="text-blue-600 mr-2"/>
                 <select 
                   className="bg-transparent font-bold text-blue-800 text-sm outline-none cursor-pointer"
@@ -541,19 +591,27 @@ export default function App() {
                 </select>
              </div>
 
-             <div className="hidden md:flex items-center gap-2">
-               <Link size={14} className="text-gray-400"/>
-               <input type="text" placeholder="URL Web App (Script)..." 
-                 className="text-xs border border-gray-300 rounded px-2 py-1.5 w-48 focus:outline-blue-500"
+             <div className="flex items-center gap-2">
+               <input type="text" placeholder="Dán URL Web App (Script)..." 
+                 className="text-xs border border-gray-300 rounded px-2 py-1.5 w-32 md:w-48 focus:outline-blue-500"
                  value={scriptUrl} onChange={(e) => setScriptUrl(e.target.value)}
                />
+               <Button 
+                  variant="success" 
+                  onClick={handleSyncAll} 
+                  disabled={isSyncingAll || !scriptUrl}
+                  className="py-1.5 px-3 text-xs md:text-sm whitespace-nowrap"
+                >
+                  {isSyncingAll ? <Loader className="animate-spin" size={14}/> : <Save size={14}/>}
+                  Đồng bộ
+               </Button>
             </div>
           </div>
         </div>
       </header>
 
       <main className="max-w-6xl mx-auto px-4 py-6">
-        {/* TABS (ĐÃ THÊM LẠI TAB ĐIỂM DANH Ở GIỮA) */}
+        {/* TABS */}
         <div className="flex flex-wrap gap-2 mb-6">
           <button onClick={() => setActiveTab('dashboard')} className={`px-5 py-2.5 rounded-full font-medium text-sm flex items-center gap-2 transition-colors ${activeTab === 'dashboard' ? 'bg-gray-900 text-white shadow-md' : 'bg-white text-gray-600 hover:bg-gray-200'}`}>
             <Layout size={16}/> Điều khiển
