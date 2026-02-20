@@ -6,6 +6,10 @@ import {
   User, Repeat, Monitor, Info, FileText
 } from 'lucide-react';
 
+// --- Link Google Script cố định cho phần Đánh giá chéo (Sinh viên) ---
+// Sinh viên sẽ gửi thẳng vào link này mà không cần nhập
+const PEER_REVIEW_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbxBPRlkjpMLDctdm2Uk7aYex_P6Cx0uhIdUmwOcYEm9C7JDe5OH92FiWEn6Nz1HNenY-A/exec';
+
 // --- Components ---
 const Card = ({ children, className = "" }) => (
   <div className={`bg-white rounded-xl shadow-sm border border-gray-200 ${className}`}>
@@ -165,7 +169,7 @@ export default function App() {
   const [timeLeft, setTimeLeft] = useState(courseSessions[0].stages[0].time * 60);
   const [timerActive, setTimerActive] = useState(false);
 
-  // Google Sheet Integration
+  // Google Sheet Integration (Dành cho Giảng Viên)
   const [scriptUrl, setScriptUrl] = useState(() => localStorage.getItem('GEO_CLASS_SCRIPT_URL') || '');
   const [lastSyncStatus, setLastSyncStatus] = useState(null); 
   const [isSyncingAll, setIsSyncingAll] = useState(false);
@@ -234,7 +238,7 @@ export default function App() {
     return ((s.attendance + s.discussion + s.groupReport + s.regular + (s.midterm * 2)) / 6).toFixed(1);
   };
 
-  // --- HÀM GỬI DỮ LIỆU ĐƠN LẺ LÊN GOOGLE SHEET (Tự động lưu) ---
+  // --- HÀM GỬI DỮ LIỆU ĐƠN LẺ LÊN GOOGLE SHEET (Tự động lưu - Giảng viên) ---
   const sendStudentData = useCallback(async (student) => {
     if (!scriptUrl) return;
 
@@ -269,7 +273,7 @@ export default function App() {
     }
   }, [scriptUrl]);
 
-  // --- HÀM ĐỒNG BỘ TOÀN BỘ (Thủ công) ---
+  // --- HÀM ĐỒNG BỘ TOÀN BỘ (Thủ công - Giảng viên) ---
   const handleSyncAll = async () => {
     if (!scriptUrl) {
       setLastSyncStatus("Vui lòng nhập URL Web App (Script) trước!");
@@ -318,14 +322,10 @@ export default function App() {
     }
   };
 
-  // --- HÀM SUBMIT DỮ LIỆU ĐÁNH GIÁ CHÉO ---
+  // --- HÀM SUBMIT DỮ LIỆU ĐÁNH GIÁ CHÉO (Dành riêng cho Sinh Viên) ---
   const submitPeerEvaluation = async () => {
-      if (!scriptUrl) {
-          alert("Vui lòng nhập URL Web App (Script) ở thanh Header trước khi gửi!");
-          return;
-      }
       if (!evaluator) {
-          alert("Vui lòng chọn Tên người đánh giá!");
+          alert("Vui lòng chọn Tên của bạn ở mục 'Người đánh giá' trước khi gửi!");
           return;
       }
 
@@ -358,21 +358,22 @@ export default function App() {
       }
 
       try {
-          await fetch(scriptUrl, {
+          // CHÚ Ý: Đã sử dụng Link cố định ẩn đi, không phụ thuộc vào ô nhập URL trên Header
+          await fetch(PEER_REVIEW_SCRIPT_URL, {
               method: 'POST', mode: 'no-cors',
               headers: { 'Content-Type': 'application/json' },
               body: JSON.stringify(payload)
           });
-          alert("Đã gửi dữ liệu đánh giá thành công!");
+          alert("Đã gửi Phiếu đánh giá thành công lên hệ thống!");
       } catch (error) {
-          alert("Lỗi kết nối khi gửi dữ liệu đánh giá!");
+          alert("Lỗi kết nối mạng khi gửi dữ liệu đánh giá!");
       } finally {
           setIsSyncingAll(false);
       }
   };
 
   const handleClearPeerData = () => {
-      if(window.confirm("Thầy/Cô/Bạn có chắc chắn muốn xóa toàn bộ dữ liệu đánh giá nháp hiện tại?")) {
+      if(window.confirm("Bạn có chắc chắn muốn xóa toàn bộ dữ liệu đánh giá nháp hiện tại?")) {
           setEvaluationScores({ member: {}, peer: {}, leader: {}, lecturer: {} });
           setEvaluator("");
       }
@@ -740,38 +741,38 @@ export default function App() {
   // View: Tab Đánh Giá Chéo (Mới)
   const renderPeerReview = () => {
     return (
-        <Card className="overflow-hidden">
+        <Card className="overflow-hidden border-2 border-purple-200">
             {/* Common Header Info for Peer Review */}
-            <div className="p-6 bg-blue-50 border-b border-blue-100 flex flex-col md:flex-row justify-between items-center gap-4">
+            <div className="p-6 bg-purple-50 border-b border-purple-100 flex flex-col md:flex-row justify-between items-center gap-4">
                 <div className="w-full md:w-1/2">
                     <label className="block text-sm font-bold text-gray-700 mb-1">Người đánh giá (Chọn tên bạn) <span className="text-red-500">*</span></label>
                     <select 
                         value={evaluator} 
                         onChange={(e) => setEvaluator(e.target.value)} 
-                        className="w-full py-2 px-3 border border-gray-300 rounded focus:border-blue-500 outline-none shadow-sm"
+                        className="w-full py-2 px-3 border border-gray-300 rounded focus:border-purple-500 outline-none shadow-sm text-purple-900 font-medium bg-white"
                     >
-                        <option value="">-- Chọn thành viên --</option>
+                        <option value="">-- Click vào đây để chọn tên bạn --</option>
                         {students.map(s => <option key={s.id} value={s.name}>{s.name} ({s.code})</option>)}
                         <option value="Giảng Viên">Giảng Viên / Khác</option>
                     </select>
                 </div>
-                <Button variant="outline" className="bg-white border-blue-500 text-blue-700 hover:bg-blue-100 mt-5 md:mt-0" onClick={() => setShowRubricModal(true)}>
-                    <Info size={16}/> Xem Bảng Điểm (Rubric)
+                <Button variant="outline" className="bg-white border-purple-500 text-purple-700 hover:bg-purple-100 mt-5 md:mt-0" onClick={() => setShowRubricModal(true)}>
+                    <Info size={16}/> Xem Bảng Tiêu Chí (Rubric)
                 </Button>
             </div>
 
             {/* Peer Review Navigation Tabs */}
             <div className="flex border-b text-sm md:text-base font-medium overflow-x-auto">
-                <button onClick={() => setPeerRole('member')} className={`flex-1 py-3 px-4 text-center whitespace-nowrap border-b-2 flex items-center justify-center gap-2 ${peerRole === 'member' ? 'border-blue-600 text-blue-700 bg-white' : 'border-transparent text-gray-500 bg-gray-50 hover:bg-gray-100'}`}>
+                <button onClick={() => setPeerRole('member')} className={`flex-1 py-3 px-4 text-center whitespace-nowrap border-b-2 flex items-center justify-center gap-2 ${peerRole === 'member' ? 'border-purple-600 text-purple-700 bg-white font-bold' : 'border-transparent text-gray-500 bg-gray-50 hover:bg-gray-100'}`}>
                     <User size={18}/> Tự Đánh Giá
                 </button>
-                <button onClick={() => setPeerRole('peer')} className={`flex-1 py-3 px-4 text-center whitespace-nowrap border-b-2 flex items-center justify-center gap-2 ${peerRole === 'peer' ? 'border-blue-600 text-blue-700 bg-white' : 'border-transparent text-gray-500 bg-gray-50 hover:bg-gray-100'}`}>
+                <button onClick={() => setPeerRole('peer')} className={`flex-1 py-3 px-4 text-center whitespace-nowrap border-b-2 flex items-center justify-center gap-2 ${peerRole === 'peer' ? 'border-purple-600 text-purple-700 bg-white font-bold' : 'border-transparent text-gray-500 bg-gray-50 hover:bg-gray-100'}`}>
                     <Repeat size={18}/> Đánh Giá Chéo
                 </button>
-                <button onClick={() => setPeerRole('leader')} className={`flex-1 py-3 px-4 text-center whitespace-nowrap border-b-2 flex items-center justify-center gap-2 ${peerRole === 'leader' ? 'border-blue-600 text-blue-700 bg-white' : 'border-transparent text-gray-500 bg-gray-50 hover:bg-gray-100'}`}>
+                <button onClick={() => setPeerRole('leader')} className={`flex-1 py-3 px-4 text-center whitespace-nowrap border-b-2 flex items-center justify-center gap-2 ${peerRole === 'leader' ? 'border-purple-600 text-purple-700 bg-white font-bold' : 'border-transparent text-gray-500 bg-gray-50 hover:bg-gray-100'}`}>
                     <Users size={18}/> Nhóm Trưởng
                 </button>
-                <button onClick={() => setPeerRole('lecturer')} className={`flex-1 py-3 px-4 text-center whitespace-nowrap border-b-2 flex items-center justify-center gap-2 ${peerRole === 'lecturer' ? 'border-blue-600 text-blue-700 bg-white' : 'border-transparent text-gray-500 bg-gray-50 hover:bg-gray-100'}`}>
+                <button onClick={() => setPeerRole('lecturer')} className={`flex-1 py-3 px-4 text-center whitespace-nowrap border-b-2 flex items-center justify-center gap-2 ${peerRole === 'lecturer' ? 'border-purple-600 text-purple-700 bg-white font-bold' : 'border-transparent text-gray-500 bg-gray-50 hover:bg-gray-100'}`}>
                     <Monitor size={18}/> Giảng Viên
                 </button>
             </div>
@@ -782,13 +783,13 @@ export default function App() {
                 {peerRole === 'member' && (
                     <div className="space-y-4 animate-fade-in">
                         <div className="flex justify-between items-center mb-4">
-                            <h3 className="text-lg font-bold text-blue-900">Tự Đánh Giá Cá Nhân (Theo Buổi Học)</h3>
+                            <h3 className="text-lg font-bold text-purple-900">Tự Đánh Giá Cá Nhân (Theo Buổi Học)</h3>
                             <select value={peerWeek} onChange={(e) => setPeerWeek(e.target.value)} className="py-1.5 px-3 border border-gray-300 rounded text-sm font-bold text-gray-700 bg-white">
                                 {Array.from({length: 12}, (_, i) => <option key={i+1} value={i+1}>Buổi {i+1}</option>)}
                             </select>
                         </div>
                         <div className="bg-yellow-50 p-3 rounded border border-yellow-200 text-sm mb-4 text-yellow-800">
-                            <strong>Lưu ý:</strong> Điểm từ 0 - 2.5 cho mỗi tiêu chí (Tổng 10đ).
+                            <strong>Lưu ý:</strong> Điểm từ 0 - 2.5 cho mỗi tiêu chí (Tổng tối đa 10 điểm).
                         </div>
                         
                         {memberCriteriaData.map((crit, index) => (
@@ -798,12 +799,12 @@ export default function App() {
                                     <p className="text-xs text-gray-500 mt-1">{crit.desc}</p>
                                 </div>
                                 <div className="flex items-center bg-gray-50 p-2 rounded border">
-                                    <label className="text-xs font-bold text-blue-800 uppercase mr-3">Điểm:</label>
+                                    <label className="text-xs font-bold text-purple-800 uppercase mr-3">Điểm:</label>
                                     <input 
                                         type="number" step="0.5" min="0" max="2.5" 
                                         value={evaluationScores.member[`crit_${index}`] ?? ''}
                                         onChange={(e) => handleScoreChange('member', `crit_${index}`, e.target.value)}
-                                        className="w-20 p-2 border rounded focus:border-blue-500 outline-none text-center font-bold text-lg text-blue-900 bg-white" 
+                                        className="w-20 p-2 border rounded focus:border-purple-500 outline-none text-center font-bold text-lg text-purple-900 bg-white" 
                                         placeholder="0.0"
                                     />
                                 </div>
@@ -816,8 +817,8 @@ export default function App() {
                 {peerRole !== 'member' && (
                     <div className="animate-fade-in">
                         <div className="mb-4">
-                            <h3 className="text-lg font-bold text-blue-900">
-                                {peerRole === 'peer' ? 'Đánh Giá Chéo Sinh Viên' : peerRole === 'leader' ? 'Nhóm Trưởng Tổng Hợp' : 'Giảng Viên Đánh Giá'}
+                            <h3 className="text-lg font-bold text-purple-900">
+                                {peerRole === 'peer' ? 'Đánh Giá Chéo Sinh Viên Khác' : peerRole === 'leader' ? 'Nhóm Trưởng Tổng Hợp Điểm' : 'Giảng Viên Đánh Giá'}
                             </h3>
                         </div>
                         
@@ -835,7 +836,7 @@ export default function App() {
                                 </thead>
                                 <tbody className="divide-y divide-gray-200">
                                     {(peerRole === 'lecturer' ? lecturerCriteria : leaderCriteria).map((criteria, cIdx) => (
-                                        <tr key={cIdx} className="hover:bg-gray-50 transition">
+                                        <tr key={cIdx} className="hover:bg-purple-50 transition">
                                             <td className="p-3 text-sm text-gray-800 sticky left-0 bg-white border-r font-medium z-10">{criteria}</td>
                                             {students.map((s, sIdx) => (
                                                 <td key={sIdx} className="p-1 text-center border-l border-gray-100">
@@ -843,20 +844,20 @@ export default function App() {
                                                         type="number" step="0.5" min="0" max="2.5" 
                                                         value={evaluationScores[peerRole]?.[`m_${sIdx}_c_${cIdx}`] ?? ''}
                                                         onChange={(e) => handleScoreChange(peerRole, `m_${sIdx}_c_${cIdx}`, e.target.value)}
-                                                        className="w-full p-2 text-center text-sm rounded bg-gray-50 hover:bg-blue-50 focus:bg-white border border-transparent focus:border-blue-300 outline-none font-bold text-gray-700" 
+                                                        className="w-full p-2 text-center text-sm rounded bg-gray-50 hover:bg-white focus:bg-white border border-transparent focus:border-purple-400 outline-none font-bold text-gray-700" 
                                                     />
                                                 </td>
                                             ))}
                                         </tr>
                                     ))}
                                 </tbody>
-                                <tfoot className="bg-blue-50 font-bold text-blue-900 border-t-2 border-blue-200">
+                                <tfoot className="bg-purple-50 font-bold text-purple-900 border-t-2 border-purple-200">
                                     <tr>
-                                        <td className="p-3 text-right sticky left-0 bg-blue-50 border-r z-10">TỔNG CỘNG (10đ):</td>
+                                        <td className="p-3 text-right sticky left-0 bg-purple-50 border-r z-10">TỔNG CỘNG (10đ):</td>
                                         {students.map((s, sIdx) => {
                                             const total = calculatePeerTotal(peerRole, sIdx);
                                             return (
-                                                <td key={sIdx} className={`p-2 text-center border-l border-blue-200 text-lg ${total > 10 ? 'text-red-600' : ''}`}>
+                                                <td key={sIdx} className={`p-2 text-center border-l border-purple-200 text-lg ${total > 10 ? 'text-red-600' : ''}`}>
                                                     {total}
                                                 </td>
                                             )
@@ -874,7 +875,7 @@ export default function App() {
                         Xóa làm lại form này
                     </button>
                     <div className="flex gap-3 w-full md:w-auto">
-                        <Button onClick={submitPeerEvaluation} disabled={isSyncingAll} className="w-full md:w-auto">
+                        <Button onClick={submitPeerEvaluation} disabled={isSyncingAll} className="w-full md:w-auto bg-purple-700 hover:bg-purple-800 text-white shadow-lg">
                             {isSyncingAll ? <Loader className="animate-spin" size={16}/> : <Save size={16}/>}
                             Gửi Phiếu Đánh Giá
                         </Button>
@@ -920,16 +921,19 @@ export default function App() {
                 </select>
              </div>
 
+             {/* Khu vực Nhập Link Google Sheet (Dành riêng cho chức năng Quản lý của GV) */}
              <div className="flex items-center gap-2">
-               <input type="text" placeholder="Dán URL Web App (Script)..." 
-                 className="text-xs border border-gray-300 rounded px-2 py-1.5 w-32 md:w-48 focus:outline-blue-500"
+               <input type="text" placeholder="Dán URL Web App GV..." 
+                 className="text-xs border border-gray-300 rounded px-2 py-1.5 w-24 md:w-40 focus:outline-blue-500"
                  value={scriptUrl} onChange={(e) => setScriptUrl(e.target.value)}
+                 title="Chỉ dành cho Giảng Viên đồng bộ bảng điểm chính"
                />
                <Button 
                   variant="success" 
                   onClick={handleSyncAll} 
                   disabled={isSyncingAll || !scriptUrl}
                   className="py-1.5 px-3 text-xs md:text-sm whitespace-nowrap"
+                  title="Đồng bộ điểm lớp học lên Sheet GV"
                 >
                   {isSyncingAll ? <Loader className="animate-spin" size={14}/> : <Save size={14}/>}
                   <span className="hidden md:inline">Đồng bộ</span>
@@ -940,7 +944,7 @@ export default function App() {
       </header>
 
       <main className="max-w-6xl mx-auto px-4 py-6">
-        {/* TABS */}
+        {/* TABS MENU */}
         <div className="flex flex-wrap gap-2 mb-6">
           <button onClick={() => setActiveTab('dashboard')} className={`px-4 py-2.5 rounded-full font-medium text-sm flex items-center gap-2 transition-colors ${activeTab === 'dashboard' ? 'bg-gray-900 text-white shadow-md' : 'bg-white text-gray-600 hover:bg-gray-200'}`}>
             <Layout size={16}/> Điều khiển
