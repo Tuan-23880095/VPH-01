@@ -240,6 +240,22 @@ export default function App() {
   }, [scriptUrl]);
 
   // --- ACTIONS ---
+
+  // Hàm chuyển đổi điểm danh (10đ <-> 0đ)
+  const toggleAttendance = (id) => {
+    const updatedStudents = students.map(s => {
+      if (s.id === id) {
+        return { ...s, attendance: s.attendance > 0 ? 0 : 10 };
+      }
+      return s;
+    });
+    setStudents(updatedStudents);
+    
+    // Gửi dữ liệu đồng bộ
+    const changedStudent = updatedStudents.find(s => s.id === id);
+    if (changedStudent) sendStudentData(changedStudent);
+  };
+
   const updateStudentScore = (id, type, value) => {
     const newValue = parseFloat(value) || 0;
     const updatedStudents = students.map(s => s.id === id ? { ...s, [type]: newValue } : s);
@@ -371,6 +387,63 @@ export default function App() {
     </div>
   );
 
+  // GIAO DIỆN ĐIỂM DANH MỚI ĐƯỢC THÊM LẠI
+  const renderAttendance = () => (
+    <Card className="p-6">
+      <div className="flex justify-between items-center mb-6">
+        <h2 className="text-xl font-bold flex items-center gap-2"><CheckSquare/> Điểm danh Nhanh (10%)</h2>
+        <Button onClick={() => {
+          // Chỉ set điểm toàn bộ, không bắn API tự động để tránh quá tải
+          const updated = students.map(s => ({...s, attendance: 10}));
+          setStudents(updated);
+          setLastSyncStatus("Đã reset Có mặt tất cả (Sẽ đồng bộ khi có thay đổi)");
+          setTimeout(() => setLastSyncStatus(null), 3000);
+        }}>
+          Có mặt tất cả
+        </Button>
+      </div>
+      <div className="overflow-x-auto">
+        <table className="w-full text-left border-collapse">
+          <thead>
+            <tr className="bg-gray-100 border-b">
+              <th className="p-3">MSSV</th>
+              <th className="p-3">Họ và tên</th>
+              <th className="p-3">Nhóm</th>
+              <th className="p-3 text-center">Trạng thái (10đ)</th>
+              <th className="p-3 text-center">Tác vụ</th>
+            </tr>
+          </thead>
+          <tbody>
+            {students.map(student => (
+              <tr key={student.id} className="border-b hover:bg-gray-50">
+                <td className="p-3 text-gray-600">{student.code}</td>
+                <td className="p-3 font-medium">{student.name}</td>
+                <td className="p-3">
+                  <span className="bg-blue-100 text-blue-800 text-xs px-2 py-1 rounded-full">
+                    Nhóm {student.group}
+                  </span>
+                </td>
+                <td className="p-3 text-center">
+                  <span className={`px-2 py-1 rounded text-sm ${student.attendance > 0 ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
+                    {student.attendance > 0 ? 'Có mặt (10đ)' : 'Vắng (0đ)'}
+                  </span>
+                </td>
+                <td className="p-3 text-center">
+                  <button 
+                    onClick={() => toggleAttendance(student.id)}
+                    className={`w-10 h-6 rounded-full transition-colors relative ${student.attendance > 0 ? 'bg-green-500' : 'bg-gray-300'}`}
+                  >
+                    <div className={`absolute top-1 w-4 h-4 bg-white rounded-full transition-transform ${student.attendance > 0 ? 'left-5' : 'left-1'}`} />
+                  </button>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </Card>
+  );
+
   const renderScoring = () => (
     <Card className="p-6">
       <div className="flex justify-between items-center mb-6">
@@ -480,19 +553,25 @@ export default function App() {
       </header>
 
       <main className="max-w-6xl mx-auto px-4 py-6">
-        {/* TABS */}
-        <div className="flex gap-2 mb-6">
+        {/* TABS (ĐÃ THÊM LẠI TAB ĐIỂM DANH Ở GIỮA) */}
+        <div className="flex flex-wrap gap-2 mb-6">
           <button onClick={() => setActiveTab('dashboard')} className={`px-5 py-2.5 rounded-full font-medium text-sm flex items-center gap-2 transition-colors ${activeTab === 'dashboard' ? 'bg-gray-900 text-white shadow-md' : 'bg-white text-gray-600 hover:bg-gray-200'}`}>
-            <Layout size={16}/> Điều khiển Lớp học
+            <Layout size={16}/> Điều khiển
           </button>
+          
+          <button onClick={() => setActiveTab('attendance')} className={`px-5 py-2.5 rounded-full font-medium text-sm flex items-center gap-2 transition-colors ${activeTab === 'attendance' ? 'bg-blue-600 text-white shadow-md' : 'bg-white text-gray-600 hover:bg-gray-200'}`}>
+            <CheckSquare size={16}/> Điểm danh
+          </button>
+
           <button onClick={() => setActiveTab('scoring')} className={`px-5 py-2.5 rounded-full font-medium text-sm flex items-center gap-2 transition-colors ${activeTab === 'scoring' ? 'bg-green-600 text-white shadow-md' : 'bg-white text-gray-600 hover:bg-gray-200'}`}>
-            <Trophy size={16}/> Bảng Điểm Tổng Hợp
+            <Trophy size={16}/> Bảng Điểm (60%)
           </button>
         </div>
 
         {/* CONTENT */}
         <div className="animate-fade-in">
           {activeTab === 'dashboard' && renderDashboard()}
+          {activeTab === 'attendance' && renderAttendance()}
           {activeTab === 'scoring' && renderScoring()}
         </div>
       </main>
