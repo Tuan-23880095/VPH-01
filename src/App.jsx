@@ -2,7 +2,8 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { 
   Users, CheckSquare, Trophy, BookOpen, BarChart2, 
   Play, Pause, RotateCcw, HelpCircle, Layout, Globe, 
-  CloudLightning, Link, Loader, Save, CheckCircle, AlertCircle, Calendar
+  CloudLightning, Link, Loader, Save, CheckCircle, AlertCircle, Calendar,
+  UserCircle, ExchangeAlt, UsersCog, ChalkboardTeacher, Info, FileSpreadsheet
 } from 'lucide-react';
 
 // --- Components ---
@@ -18,6 +19,7 @@ const Button = ({ onClick, children, variant = "primary", className = "", disabl
     primary: "bg-blue-600 text-white hover:bg-blue-700 disabled:bg-blue-300",
     secondary: "bg-gray-100 text-gray-700 hover:bg-gray-200 disabled:bg-gray-50",
     success: "bg-green-600 text-white hover:bg-green-700 disabled:bg-green-300",
+    danger: "bg-red-50 text-red-600 hover:bg-red-100",
     outline: "border-2 border-gray-200 text-gray-600 hover:border-gray-300 bg-transparent"
   };
   return (
@@ -139,9 +141,20 @@ const courseSessions = [
   }
 ];
 
+// --- Rubric Data cho phần Đánh giá chéo ---
+const memberCriteriaData = [
+  { title: "1. THAM DỰ & PHỐI HỢP TRONG NHÓM", desc: "Mức 1: Vắng >20% (0.5đ) | Mức 2: Vắng 10-20% (1.5đ) | Mức 3: Vắng <10% (2.5đ)" },
+  { title: "2. QUẢN LÝ CÔNG VIỆC", desc: "Mức 1: Trễ hạn (0.5đ) | Mức 2: Đúng hạn (1.5đ) | Mức 3: Chủ động, sớm hạn (2.5đ)" },
+  { title: "3. GIAO TIẾP", desc: "Mức 1: Kém (0.5đ) | Mức 2: Khá (1.5đ) | Mức 3: Tốt, rõ ràng (2.5đ)" },
+  { title: "4. KỸ NĂNG GIẢI QUYẾT VẤN ĐỀ", desc: "Mức 1: Kém (0.5đ) | Mức 2: Khá (1.5đ) | Mức 3: Tốt, logic (2.5đ)" }
+];
+const leaderCriteria = ["1. THAM DỰ & PHỐI HỢP", "2. QUẢN LÝ CÔNG VIỆC", "3. GIAO TIẾP", "4. GIẢI QUYẾT VẤN ĐỀ"];
+const lecturerCriteria = ["1. CHUYÊN CẦN", "2. NGHIÊM TÚC", "3. THẢO LUẬN/BÁO CÁO", "4. BÀI TẬP/THỰC HÀNH", "5. NHÓM TRƯỞNG"];
+
+
 // --- Main Application ---
 export default function App() {
-  const [activeTab, setActiveTab] = useState('dashboard');
+  const [activeTab, setActiveTab] = useState('dashboard'); // dashboard, attendance, scoring, peerReview
   
   // Trạng thái buổi học hiện tại (Menu Dropdown)
   const [currentSessionIdx, setCurrentSessionIdx] = useState(0);
@@ -197,6 +210,22 @@ export default function App() {
   const [groupReportInputs, setGroupReportInputs] = useState({ 1: 0, 2: 0, 3: 0, 4: 0 });
   const [pickedStudent, setPickedStudent] = useState(null);
   const [isRolling, setIsRolling] = useState(false);
+
+  // --- TRẠNG THÁI CHO TÍNH NĂNG ĐÁNH GIÁ CHÉO ---
+  const [evaluator, setEvaluator] = useState("");
+  const [peerRole, setPeerRole] = useState('member'); // member, peer, leader, lecturer
+  const [peerWeek, setPeerWeek] = useState("1");
+  const [showRubricModal, setShowRubricModal] = useState(false);
+  
+  // Lưu trữ dữ liệu điểm đánh giá chéo. 
+  // Cấu trúc: { member: { crit_0: val, crit_1: val }, peer: { m_0_c_0: val, ... }, leader: {...}, lecturer: {...} }
+  const [evaluationScores, setEvaluationScores] = useState({
+    member: {},
+    peer: {},
+    leader: {},
+    lecturer: {}
+  });
+
 
   // --- TÍNH ĐIỂM QUÁ TRÌNH ---
   // Đề cương: CC(10%), TL(10%), BC(10%), TX(10%), GK(20%) -> Tổng 60%
@@ -289,7 +318,68 @@ export default function App() {
     }
   };
 
-  // --- ACTIONS ---
+  // --- HÀM SUBMIT DỮ LIỆU ĐÁNH GIÁ CHÉO ---
+  const submitPeerEvaluation = async () => {
+      if (!scriptUrl) {
+          alert("Vui lòng nhập URL Web App (Script) ở thanh Header trước khi gửi!");
+          return;
+      }
+      if (!evaluator) {
+          alert("Vui lòng chọn Tên người đánh giá!");
+          return;
+      }
+
+      setIsSyncingAll(true);
+      
+      let payload = {
+          role: peerRole === 'member' ? 'Tự Đánh Giá' : peerRole === 'peer' ? 'Đánh Giá Chéo' : peerRole === 'leader' ? 'Nhóm Trưởng' : 'Giảng Viên',
+          groupName: "Lớp ĐCĐT (14 SV)",
+          evaluator: evaluator,
+          comment: `Đánh giá tuần ${peerWeek}`,
+          headers: [],
+          scores: []
+      };
+
+      if (peerRole === 'member') {
+          payload.headers = memberCriteriaData.map(c => c.title);
+          payload.scores = memberCriteriaData.map((_, idx) => evaluationScores.member[`crit_${idx}`] || 0);
+      } else {
+          const criteriaList = peerRole === 'lecturer' ? lecturerCriteria : leaderCriteria;
+          payload.headers = students.map(s => s.name);
+          
+          // Gửi từng tiêu chí thành các mảng hoặc tính tổng.
+          // Ở đây tôi chọn gửi Tổng điểm để cho gọn.
+          payload.headers.unshift("Tiêu chí");
+          payload.scores.push("Tổng điểm"); // row title
+          
+          for(let i=0; i<students.length; i++) {
+              payload.scores.push(calculatePeerTotal(peerRole, i));
+          }
+      }
+
+      try {
+          await fetch(scriptUrl, {
+              method: 'POST', mode: 'no-cors',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify(payload)
+          });
+          alert("Đã gửi dữ liệu đánh giá thành công!");
+      } catch (error) {
+          alert("Lỗi kết nối khi gửi dữ liệu đánh giá!");
+      } finally {
+          setIsSyncingAll(false);
+      }
+  };
+
+  const handleClearPeerData = () => {
+      if(window.confirm("Thầy/Cô/Bạn có chắc chắn muốn xóa toàn bộ dữ liệu đánh giá nháp hiện tại?")) {
+          setEvaluationScores({ member: {}, peer: {}, leader: {}, lecturer: {} });
+          setEvaluator("");
+      }
+  }
+
+
+  // --- ACTIONS LỚP HỌC ---
 
   // Hàm chuyển đổi điểm danh (10đ <-> 0đ)
   const toggleAttendance = (id) => {
@@ -345,6 +435,32 @@ export default function App() {
     return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
   };
 
+  // --- ACTIONS ĐÁNH GIÁ CHÉO ---
+  const handleScoreChange = (tab, key, val) => {
+      let numVal = parseFloat(val);
+      if(isNaN(numVal)) numVal = 0;
+      if(numVal > 2.5) numVal = 2.5;
+      if(numVal < 0) numVal = 0;
+
+      setEvaluationScores(prev => ({
+          ...prev,
+          [tab]: {
+              ...prev[tab],
+              [key]: numVal
+          }
+      }));
+  };
+
+  const calculatePeerTotal = (tab, studentIdx) => {
+      const criteriaList = tab === 'lecturer' ? lecturerCriteria : leaderCriteria;
+      let total = 0;
+      for (let c = 0; c < criteriaList.length; c++) {
+          total += (evaluationScores[tab]?.[`m_${studentIdx}_c_${c}`] || 0);
+      }
+      return total.toFixed(1);
+  };
+
+
   // --- VIEWS ---
   const renderStatusToast = () => {
     if (!lastSyncStatus) return null;
@@ -354,6 +470,63 @@ export default function App() {
         <span className="font-medium">{lastSyncStatus}</span>
       </div>
     );
+  };
+
+  // View: Bảng Đánh Giá Chéo Modal (Rubric)
+  const renderRubricModal = () => {
+      if (!showRubricModal) return null;
+      return (
+          <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4 animate-fade-in">
+              <div className="bg-white rounded-lg shadow-2xl w-full max-w-5xl max-h-[90vh] flex flex-col">
+                  <div className="p-4 border-b flex justify-between items-center bg-blue-50 rounded-t-lg">
+                      <h3 className="text-xl font-bold text-blue-900 flex items-center"><BookOpen className="mr-2"/>Bảng Tiêu Chí Đánh Giá (Rubric)</h3>
+                      <button onClick={() => setShowRubricModal(false)} className="text-gray-500 hover:text-red-600 font-bold text-xl">&times;</button>
+                  </div>
+                  <div className="p-6 overflow-y-auto flex-1 text-sm text-gray-700">
+                      <h2 className="text-center font-bold text-xl mb-6 text-gray-800 uppercase">RUBRIC ĐÁNH GIÁ KỸ NĂNG LÀM VIỆC NHÓM</h2>
+                      <table className="w-full border-collapse">
+                          <thead>
+                              <tr className="bg-blue-700 text-white text-left">
+                                  <th className="p-3 border border-blue-800">Tiêu chí</th>
+                                  <th className="p-3 border border-blue-800">Mức 1 [0 – 1.0)</th>
+                                  <th className="p-3 border border-blue-800">Mức 2 [1.0 – 2.0)</th>
+                                  <th className="p-3 border border-blue-800">Mức 3 [2.0 – 2.5]</th>
+                              </tr>
+                          </thead>
+                          <tbody>
+                              <tr className="bg-blue-50/50">
+                                  <td className="p-3 border font-bold text-blue-900">1. Tham dự & phối hợp</td>
+                                  <td className="p-3 border">• Vắng họp/vắng mặt &gt; 20%<br/>• Không quan tâm công việc<br/>• Tương tác/buổi: 0</td>
+                                  <td className="p-3 border">• Vắng họp/vắng mặt 10–20%<br/>• Tham gia trao đổi 1–2 lần/buổi</td>
+                                  <td className="p-3 border">• Vắng họp/vắng mặt &lt; 10%<br/>• Tương tác trao đổi ≥ 3/buổi</td>
+                              </tr>
+                              <tr>
+                                  <td className="p-3 border font-bold text-blue-900">2. Quản lý công việc</td>
+                                  <td className="p-3 border">• Hoàn thành đúng hạn &lt; 70%<br/>• Trễ hạn ≥ 2 nhiệm vụ/buổi</td>
+                                  <td className="p-3 border">• Hoàn thành đúng hạn 70–90%<br/>• Trễ hạn 0–1 nhiệm vụ/buổi</td>
+                                  <td className="p-3 border">• Hoàn thành đúng hạn ≥ 90%<br/>• Hoàn thành sớm ≥ 30% nhiệm vụ</td>
+                              </tr>
+                              <tr className="bg-blue-50/50">
+                                  <td className="p-3 border font-bold text-blue-900">3. Giao tiếp</td>
+                                  <td className="p-3 border">• Phản hồi email/tin nhắn &lt; 50%<br/>• Thời gian phản hồi &gt; 24h</td>
+                                  <td className="p-3 border">• Phản hồi 50–80%<br/>• Thời gian phản hồi 8–24h</td>
+                                  <td className="p-3 border">• Phản hồi ≥ 80%<br/>• Phản hồi &lt; 8h</td>
+                              </tr>
+                              <tr>
+                                  <td className="p-3 border font-bold text-blue-900">4. Giải quyết vấn đề</td>
+                                  <td className="p-3 border">• Không phân tích được nguyên nhân<br/>• Số giải pháp khả thi: 0</td>
+                                  <td className="p-3 border">• Đề xuất 1–2 giải pháp/buổi<br/>• Tỷ lệ chấp nhận ≤ 40%</td>
+                                  <td className="p-3 border">• Đề xuất ≥ 2–3 giải pháp/buổi<br/>• Tỷ lệ chấp nhận ≥ 60%</td>
+                              </tr>
+                          </tbody>
+                      </table>
+                  </div>
+                  <div className="p-4 border-t bg-gray-50 text-right">
+                      <Button variant="secondary" onClick={() => setShowRubricModal(false)}>Đóng</Button>
+                  </div>
+              </div>
+          </div>
+      );
   };
 
   const renderDashboard = () => (
@@ -557,12 +730,161 @@ export default function App() {
     </Card>
   );
 
+  // View: Tab Đánh Giá Chéo (Mới)
+  const renderPeerReview = () => {
+    return (
+        <Card className="overflow-hidden">
+            {/* Common Header Info for Peer Review */}
+            <div className="p-6 bg-blue-50 border-b border-blue-100 flex flex-col md:flex-row justify-between items-center gap-4">
+                <div className="w-full md:w-1/2">
+                    <label className="block text-sm font-bold text-gray-700 mb-1">Người đánh giá (Chọn tên bạn) <span className="text-red-500">*</span></label>
+                    <select 
+                        value={evaluator} 
+                        onChange={(e) => setEvaluator(e.target.value)} 
+                        className="w-full py-2 px-3 border border-gray-300 rounded focus:border-blue-500 outline-none shadow-sm"
+                    >
+                        <option value="">-- Chọn thành viên --</option>
+                        {students.map(s => <option key={s.id} value={s.name}>{s.name} ({s.code})</option>)}
+                        <option value="Giảng Viên">Giảng Viên / Khác</option>
+                    </select>
+                </div>
+                <Button variant="outline" className="bg-white border-blue-500 text-blue-700 hover:bg-blue-100 mt-5 md:mt-0" onClick={() => setShowRubricModal(true)}>
+                    <Info size={16}/> Xem Bảng Điểm (Rubric)
+                </Button>
+            </div>
+
+            {/* Peer Review Navigation Tabs */}
+            <div className="flex border-b text-sm md:text-base font-medium overflow-x-auto">
+                <button onClick={() => setPeerRole('member')} className={`flex-1 py-3 px-4 text-center whitespace-nowrap border-b-2 flex items-center justify-center gap-2 ${peerRole === 'member' ? 'border-blue-600 text-blue-700 bg-white' : 'border-transparent text-gray-500 bg-gray-50 hover:bg-gray-100'}`}>
+                    <UserCircle size={18}/> Tự Đánh Giá
+                </button>
+                <button onClick={() => setPeerRole('peer')} className={`flex-1 py-3 px-4 text-center whitespace-nowrap border-b-2 flex items-center justify-center gap-2 ${peerRole === 'peer' ? 'border-blue-600 text-blue-700 bg-white' : 'border-transparent text-gray-500 bg-gray-50 hover:bg-gray-100'}`}>
+                    <ExchangeAlt size={18}/> Đánh Giá Chéo
+                </button>
+                <button onClick={() => setPeerRole('leader')} className={`flex-1 py-3 px-4 text-center whitespace-nowrap border-b-2 flex items-center justify-center gap-2 ${peerRole === 'leader' ? 'border-blue-600 text-blue-700 bg-white' : 'border-transparent text-gray-500 bg-gray-50 hover:bg-gray-100'}`}>
+                    <UsersCog size={18}/> Nhóm Trưởng
+                </button>
+                <button onClick={() => setPeerRole('lecturer')} className={`flex-1 py-3 px-4 text-center whitespace-nowrap border-b-2 flex items-center justify-center gap-2 ${peerRole === 'lecturer' ? 'border-blue-600 text-blue-700 bg-white' : 'border-transparent text-gray-500 bg-gray-50 hover:bg-gray-100'}`}>
+                    <ChalkboardTeacher size={18}/> Giảng Viên
+                </button>
+            </div>
+
+            {/* Forms */}
+            <div className="p-6">
+                {/* Form 1: Member Self Eval */}
+                {peerRole === 'member' && (
+                    <div className="space-y-4 animate-fade-in">
+                        <div className="flex justify-between items-center mb-4">
+                            <h3 className="text-lg font-bold text-blue-900">Tự Đánh Giá Cá Nhân (Theo Buổi Học)</h3>
+                            <select value={peerWeek} onChange={(e) => setPeerWeek(e.target.value)} className="py-1.5 px-3 border border-gray-300 rounded text-sm font-bold text-gray-700 bg-white">
+                                {Array.from({length: 12}, (_, i) => <option key={i+1} value={i+1}>Buổi {i+1}</option>)}
+                            </select>
+                        </div>
+                        <div className="bg-yellow-50 p-3 rounded border border-yellow-200 text-sm mb-4 text-yellow-800">
+                            <strong>Lưu ý:</strong> Điểm từ 0 - 2.5 cho mỗi tiêu chí (Tổng 10đ).
+                        </div>
+                        
+                        {memberCriteriaData.map((crit, index) => (
+                            <div key={index} className="border border-gray-200 p-4 rounded bg-white shadow-sm flex flex-col md:flex-row justify-between items-center md:items-start gap-4">
+                                <div className="flex-1">
+                                    <h3 className="font-bold text-gray-800">{crit.title}</h3>
+                                    <p className="text-xs text-gray-500 mt-1">{crit.desc}</p>
+                                </div>
+                                <div className="flex items-center bg-gray-50 p-2 rounded border">
+                                    <label className="text-xs font-bold text-blue-800 uppercase mr-3">Điểm:</label>
+                                    <input 
+                                        type="number" step="0.5" min="0" max="2.5" 
+                                        value={evaluationScores.member[`crit_${index}`] || ''}
+                                        onChange={(e) => handleScoreChange('member', `crit_${index}`, e.target.value)}
+                                        className="w-20 p-2 border rounded focus:border-blue-500 outline-none text-center font-bold text-lg text-blue-900 bg-white" 
+                                        placeholder="0.0"
+                                    />
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+                )}
+
+                {/* Form 2,3,4: Table Based (Peer, Leader, Lecturer) */}
+                {peerRole !== 'member' && (
+                    <div className="animate-fade-in">
+                        <div className="mb-4">
+                            <h3 className="text-lg font-bold text-blue-900">
+                                {peerRole === 'peer' ? 'Đánh Giá Chéo Sinh Viên' : peerRole === 'leader' ? 'Nhóm Trưởng Tổng Hợp' : 'Giảng Viên Đánh Giá'}
+                            </h3>
+                        </div>
+                        
+                        <div className="overflow-x-auto border rounded-lg">
+                            <table className="min-w-full text-sm">
+                                <thead className="bg-gray-100 text-gray-700 font-bold text-xs">
+                                    <tr>
+                                        <th className="p-3 text-left min-w-[200px] border-b border-r bg-gray-100 sticky left-0 z-10">Tiêu chí \ Sinh viên</th>
+                                        {students.map(s => {
+                                            const parts = s.name.split(' ');
+                                            const shortName = parts.length > 1 ? parts.slice(-2).join(' ') : s.name;
+                                            return <th key={s.id} className="p-2 text-center w-28 min-w-[100px] border-b border-l border-gray-200">{shortName} <br/><span className="text-[10px] font-normal text-gray-500">N{s.group}</span></th>
+                                        })}
+                                    </tr>
+                                </thead>
+                                <tbody className="divide-y divide-gray-200">
+                                    {(peerRole === 'lecturer' ? lecturerCriteria : leaderCriteria).map((criteria, cIdx) => (
+                                        <tr key={cIdx} className="hover:bg-gray-50 transition">
+                                            <td className="p-3 text-sm text-gray-800 sticky left-0 bg-white border-r font-medium z-10">{criteria}</td>
+                                            {students.map((s, sIdx) => (
+                                                <td key={sIdx} className="p-1 text-center border-l border-gray-100">
+                                                    <input 
+                                                        type="number" step="0.5" min="0" max="2.5" 
+                                                        value={evaluationScores[peerRole]?.[`m_${sIdx}_c_${cIdx}`] || ''}
+                                                        onChange={(e) => handleScoreChange(peerRole, `m_${sIdx}_c_${cIdx}`, e.target.value)}
+                                                        className="w-full p-2 text-center text-sm rounded bg-gray-50 hover:bg-blue-50 focus:bg-white border border-transparent focus:border-blue-300 outline-none font-bold text-gray-700" 
+                                                    />
+                                                </td>
+                                            ))}
+                                        </tr>
+                                    ))}
+                                </tbody>
+                                <tfoot className="bg-blue-50 font-bold text-blue-900 border-t-2 border-blue-200">
+                                    <tr>
+                                        <td className="p-3 text-right sticky left-0 bg-blue-50 border-r z-10">TỔNG CỘNG (10đ):</td>
+                                        {students.map((s, sIdx) => {
+                                            const total = calculatePeerTotal(peerRole, sIdx);
+                                            return (
+                                                <td key={sIdx} className={`p-2 text-center border-l border-blue-200 text-lg ${total > 10 ? 'text-red-600' : ''}`}>
+                                                    {total}
+                                                </td>
+                                            )
+                                        })}
+                                    </tr>
+                                </tfoot>
+                            </table>
+                        </div>
+                    </div>
+                )}
+
+                {/* Bottom Actions for Peer Review */}
+                <div className="flex flex-col md:flex-row gap-4 justify-between items-center pt-6 mt-6 border-t border-gray-100">
+                    <button onClick={handleClearPeerData} className="text-gray-400 hover:text-red-500 text-sm font-medium transition">
+                        Xóa làm lại form này
+                    </button>
+                    <div className="flex gap-3 w-full md:w-auto">
+                        <Button onClick={submitPeerEvaluation} disabled={isSyncingAll} className="w-full md:w-auto">
+                            {isSyncingAll ? <Loader className="animate-spin" size={16}/> : <Save size={16}/>}
+                            Gửi Phiếu Đánh Giá
+                        </Button>
+                    </div>
+                </div>
+            </div>
+        </Card>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-gray-100 font-sans text-gray-800 pb-10">
       {renderStatusToast()}
+      {renderRubricModal()}
       
       {/* HEADER */}
-      <header className="bg-white shadow-sm sticky top-0 z-10">
+      <header className="bg-white shadow-sm sticky top-0 z-20">
         <div className="max-w-6xl mx-auto px-4 h-16 flex items-center justify-between">
           <div className="flex items-center gap-3">
             <div className="bg-blue-600 text-white p-2 rounded-lg"><Layout size={24} /></div>
@@ -603,7 +925,7 @@ export default function App() {
                   className="py-1.5 px-3 text-xs md:text-sm whitespace-nowrap"
                 >
                   {isSyncingAll ? <Loader className="animate-spin" size={14}/> : <Save size={14}/>}
-                  Đồng bộ
+                  <span className="hidden md:inline">Đồng bộ</span>
                </Button>
             </div>
           </div>
@@ -613,16 +935,20 @@ export default function App() {
       <main className="max-w-6xl mx-auto px-4 py-6">
         {/* TABS */}
         <div className="flex flex-wrap gap-2 mb-6">
-          <button onClick={() => setActiveTab('dashboard')} className={`px-5 py-2.5 rounded-full font-medium text-sm flex items-center gap-2 transition-colors ${activeTab === 'dashboard' ? 'bg-gray-900 text-white shadow-md' : 'bg-white text-gray-600 hover:bg-gray-200'}`}>
+          <button onClick={() => setActiveTab('dashboard')} className={`px-4 py-2.5 rounded-full font-medium text-sm flex items-center gap-2 transition-colors ${activeTab === 'dashboard' ? 'bg-gray-900 text-white shadow-md' : 'bg-white text-gray-600 hover:bg-gray-200'}`}>
             <Layout size={16}/> Điều khiển
           </button>
           
-          <button onClick={() => setActiveTab('attendance')} className={`px-5 py-2.5 rounded-full font-medium text-sm flex items-center gap-2 transition-colors ${activeTab === 'attendance' ? 'bg-blue-600 text-white shadow-md' : 'bg-white text-gray-600 hover:bg-gray-200'}`}>
+          <button onClick={() => setActiveTab('attendance')} className={`px-4 py-2.5 rounded-full font-medium text-sm flex items-center gap-2 transition-colors ${activeTab === 'attendance' ? 'bg-blue-600 text-white shadow-md' : 'bg-white text-gray-600 hover:bg-gray-200'}`}>
             <CheckSquare size={16}/> Điểm danh
           </button>
 
-          <button onClick={() => setActiveTab('scoring')} className={`px-5 py-2.5 rounded-full font-medium text-sm flex items-center gap-2 transition-colors ${activeTab === 'scoring' ? 'bg-green-600 text-white shadow-md' : 'bg-white text-gray-600 hover:bg-gray-200'}`}>
+          <button onClick={() => setActiveTab('scoring')} className={`px-4 py-2.5 rounded-full font-medium text-sm flex items-center gap-2 transition-colors ${activeTab === 'scoring' ? 'bg-green-600 text-white shadow-md' : 'bg-white text-gray-600 hover:bg-gray-200'}`}>
             <Trophy size={16}/> Bảng Điểm (60%)
+          </button>
+
+          <button onClick={() => setActiveTab('peerReview')} className={`px-4 py-2.5 rounded-full font-medium text-sm flex items-center gap-2 transition-colors ${activeTab === 'peerReview' ? 'bg-purple-600 text-white shadow-md' : 'bg-white text-gray-600 hover:bg-gray-200'}`}>
+            <FileSpreadsheet size={16}/> Đánh Giá Chéo
           </button>
         </div>
 
@@ -631,6 +957,7 @@ export default function App() {
           {activeTab === 'dashboard' && renderDashboard()}
           {activeTab === 'attendance' && renderAttendance()}
           {activeTab === 'scoring' && renderScoring()}
+          {activeTab === 'peerReview' && renderPeerReview()}
         </div>
       </main>
     </div>
