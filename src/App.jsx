@@ -2,7 +2,8 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { 
   Users, CheckSquare, Trophy, BookOpen, 
   Play, Pause, RotateCcw, HelpCircle, Layout, 
-  CloudLightning, Loader, Save, CheckCircle, Calendar, Info
+  CloudLightning, Loader, Save, CheckCircle, Calendar, Info,
+  User, Repeat, Monitor, FileText
 } from 'lucide-react';
 
 // --- Link Google Script cố định cho phần Đánh giá chéo (Sinh viên) ---
