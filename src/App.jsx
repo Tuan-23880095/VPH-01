@@ -1,9 +1,8 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { 
-  Users, CheckSquare, Trophy, BookOpen, BarChart2, 
-  Play, Pause, RotateCcw, HelpCircle, Layout, Globe, 
-  CloudLightning, Link, Loader, Save, CheckCircle, AlertCircle, Calendar,
-  User, Repeat, Monitor, Info, FileText, Check
+  Users, CheckSquare, Trophy, BookOpen, 
+  Play, Pause, RotateCcw, HelpCircle, Layout, 
+  CloudLightning, Loader, Save, CheckCircle, Calendar, Info
 } from 'lucide-react';
 
 // --- Link Google Script cố định cho phần Đánh giá chéo (Sinh viên) ---
@@ -38,7 +37,6 @@ const courseSessions = [
   { id: 2, title: "Buổi 2: Các yếu tố ảnh hưởng & Phân đới", duration: 150, stages: [{ id: 1, title: "Khởi động", time: 20, content: "Phân biệt Saprolit và Litoma." }, { id: 2, title: "Sự biến hình khoáng vật", time: 50, content: "Jigsaw: Felspat -> Kaolinit, Olivin -> Goethit." }, { id: 3, title: "Truy tìm nguyên tố", time: 50, content: "Phân tích bảng số liệu hóa học." }, { id: 4, title: "Đấu trường Kahoot", time: 30, content: "Trắc nghiệm các phản ứng hóa học." }] },
   { id: 3, title: "Buổi 3: Phân loại & Phương pháp nghiên cứu VPH", duration: 150, stages: [{ id: 1, title: "Phân loại VPH", time: 40, content: "Theo địa hóa: Sialit, Feralit, Alferit." }, { id: 2, title: "Phương pháp nghiên cứu", time: 40, content: "Thực địa: Lập mặt cắt chuẩn." }, { id: 3, title: "Trạm thực hành", time: 45, content: "Seminar: Thiết kế mặt cắt." }, { id: 4, title: "Thử thách Tam giác", time: 25, content: "Chấm thử điểm Si-Al-Fe." }] },
   { id: 4, title: "Buổi 4: Thực hành VPH", duration: 150, stages: [{ id: 1, title: "Hướng dẫn", time: 30, content: "Cung cấp số liệu." }, { id: 2, title: "Vẽ mặt cắt", time: 45, content: "Dựng cột địa tầng." }, { id: 3, title: "Định danh", time: 40, content: "Sử dụng biểu đồ tam giác." }, { id: 4, title: "Thu bài", time: 35, content: "Chấm chéo, thu bài." }] },
-  // ... (Để code gọn, tôi ẩn bớt nội dung text các buổi sau, logic vẫn chạy bình thường)
   { id: 5, title: "Buổi 5: Các loại VPH chính", duration: 150, stages: [{ id: 1, title: "Truy tìm", time: 20, content: "Matching Game." }, { id: 2, title: "Trạm chuyên gia", time: 60, content: "Phân tích VPH." }, { id: 3, title: "Case Study", time: 40, content: "Bí ẩn Bauxit." }, { id: 4, title: "Tổng kết", time: 30, content: "Chuẩn bị KT." }] },
   { id: 6, title: "Buổi 6: VPH Quặng hóa & Kiểm tra", duration: 150, stages: [{ id: 1, title: "Data Mining", time: 20, content: "Phân tích biểu đồ." }, { id: 2, title: "Mini-Project", time: 40, content: "Tính Msi." }, { id: 3, title: "Hệ thống", time: 30, content: "Mindmap." }, { id: 4, title: "Kiểm tra", time: 60, content: "Thi trắc nghiệm/Tự luận." }] },
   { id: 7, title: "Buổi 7: Đại cương Trầm tích Đệ tứ", duration: 150, stages: [{ id: 1, title: "Khởi động", time: 20, content: "Phân biệt TTĐT." }, { id: 2, title: "Chu kỳ Băng hà", time: 40, content: "Mối quan hệ." }, { id: 3, title: "Quan sát", time: 60, content: "Đánh giá độ hạt." }, { id: 4, title: "Giải mã", time: 30, content: "Kahoot." }] },
