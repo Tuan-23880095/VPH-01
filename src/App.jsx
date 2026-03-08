@@ -118,7 +118,64 @@ export default function App() {
   const [groupReportInputs, setGroupReportInputs] = useState({ 1: 0, 2: 0, 3: 0, 4: 0 });
   const [pickedStudent, setPickedStudent] = useState(null);
   const [isRolling, setIsRolling] = useState(false);
+// === BẮT ĐẦU: ĐOẠN CODE BỔ SUNG CÁC HÀM BỊ THIẾU ===
 
+  // 1. Hàm format thời gian đếm ngược
+  const formatTime = (seconds) => {
+    const m = Math.floor(seconds / 60);
+    const s = seconds % 60;
+    return `${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
+  };
+
+  // 2. Hàm gọi ngẫu nhiên sinh viên
+  const pickRandomStudent = () => {
+    if (isRolling) return;
+    setIsRolling(true);
+    let counter = 0;
+    const interval = setInterval(() => {
+      const randomIdx = Math.floor(Math.random() * students.length);
+      setPickedStudent(students[randomIdx]);
+      counter++;
+      if (counter > 15) { // Quay 15 lần rồi dừng
+        clearInterval(interval);
+        setIsRolling(false);
+      }
+    }, 100);
+  };
+
+  // 3. Hàm cập nhật điểm cá nhân (Chuyên cần, Thảo luận, GK...)
+  const updateStudentScore = (id, field, val) => {
+    let numVal = parseFloat(val);
+    if (isNaN(numVal)) numVal = 0;
+    if (numVal > 10) numVal = 10;
+    if (numVal < 0) numVal = 0;
+
+    setStudents(prev => prev.map(s => 
+      s.id === id ? { ...s, [field]: numVal } : s
+    ));
+  };
+
+  // 4. Hàm chấm điểm nhóm nhanh (Cập nhật cho tất cả SV trong nhóm)
+  const updateGroupReportScore = (groupId, val) => {
+    let numVal = parseFloat(val);
+    if (isNaN(numVal)) numVal = 0;
+    if (numVal > 10) numVal = 10;
+    if (numVal < 0) numVal = 0;
+
+    setGroupReportInputs(prev => ({ ...prev, [groupId]: numVal }));
+    setStudents(prev => prev.map(s => 
+      s.group === parseInt(groupId) ? { ...s, groupReport: numVal } : s
+    ));
+  };
+
+  // 5. Hàm điểm danh nhanh bằng nút gạt
+  const toggleAttendance = (id) => {
+    setStudents(prev => prev.map(s => 
+      s.id === id ? { ...s, attendance: s.attendance > 0 ? 0 : 10 } : s
+    ));
+  };
+
+  // === KẾT THÚC: ĐOẠN CODE BỔ SUNG ===
   // --- STATE CHO ĐÁNH GIÁ CHÉO (MỚI) ---
   const [evaluator, setEvaluator] = useState("");
   const [evalType, setEvalType] = useState('teamwork'); // 'teamwork' | 'discussion'
