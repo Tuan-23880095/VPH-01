@@ -853,6 +853,9 @@ export default function App() {
           <button onClick={() => setActiveTab('dashboard')} className={`px-4 py-2.5 rounded-full font-medium text-sm flex items-center gap-2 transition-colors ${activeTab === 'dashboard' ? 'bg-gray-900 text-white shadow-md' : 'bg-white text-gray-600 hover:bg-gray-200'}`}>
             <Layout size={16}/> Điều khiển
           </button>
+          <button onClick={() => setActiveTab('worksheet')} className={`px-4 py-2.5 rounded-full font-medium text-sm flex items-center gap-2 transition-colors ${activeTab === 'worksheet' ? 'bg-orange-600 text-white shadow-md' : 'bg-white text-gray-600 hover:bg-gray-200 border border-orange-200'}`}>
+            <FileText size={16} className={activeTab === 'worksheet' ? 'text-white' : 'text-orange-600'}/> Phiếu Bài Tập (B.2)
+          </button>
           <button onClick={() => setActiveTab('attendance')} className={`px-4 py-2.5 rounded-full font-medium text-sm flex items-center gap-2 transition-colors ${activeTab === 'attendance' ? 'bg-blue-600 text-white shadow-md' : 'bg-white text-gray-600 hover:bg-gray-200'}`}>
             <CheckSquare size={16}/> Điểm danh
           </button>
@@ -870,6 +873,7 @@ export default function App() {
           {activeTab === 'attendance' && renderAttendance()}
           {activeTab === 'scoring' && renderScoring()}
           {activeTab === 'peerReview' && renderPeerReview()}
+          {activeTab === 'worksheet' && renderWorksheetSession2()}
         </div>
       </main>
     </div>
