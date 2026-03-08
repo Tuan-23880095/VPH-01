@@ -66,7 +66,12 @@ const criteriaDiscussion = [
 // --- Main Application ---
 export default function App() {
   const [activeTab, setActiveTab] = useState('dashboard'); 
-  
+  // --- STATE CHO PHIẾU BÀI TẬP BUỔI 2 ---
+  const [worksheetAnswers, setWorksheetAnswers] = useState({
+    match1: '', match2: '', match3: '', match4: '',
+    explainA: '', explainB: ''
+  });
+  const [showWorksheetKey, setShowWorksheetKey] = useState(false); // Ẩn/hiện đáp án
   // Trạng thái buổi học hiện tại
   const [currentSessionIdx, setCurrentSessionIdx] = useState(0);
   const currentSession = courseSessions[currentSessionIdx];
@@ -523,6 +528,171 @@ export default function App() {
 
   // View: Tab Đánh Giá Chéo (LÀM LẠI THEO YÊU CẦU MỚI)
   const renderPeerReview = () => {
+    // View: Tab Phiếu bài tập Buổi 2
+  const renderWorksheetSession2 = () => {
+    const colA = [
+      { id: 1, text: "1. Feldspar (Tràng thạch)", ans: 'D' },
+      { id: 2, text: "2. Quartz (Thạch anh)", ans: 'B' },
+      { id: 3, text: "3. Olivin / Pyroxen (Nhóm khoáng vật chứa Fe-Mg)", ans: 'A' },
+      { id: 4, text: "4. Mica (Biotit / Muscovit)", ans: 'C' }
+    ];
+    
+    const colB = [
+      { id: 'A', text: "A. Goethit, Hematit (Oxit sắt) + Montmorillonit." },
+      { id: 'B', text: "B. Khoáng vật 'Trơ', sót lại." },
+      { id: 'C', text: "C. Hydromica -> Kaolinit." },
+      { id: 'D', text: "D. Kaolinit, Gibsit." }
+    ];
+
+    return (
+      <div className="space-y-6 animate-fade-in">
+        {/* Header Phiếu */}
+        <Card className="p-6 bg-gradient-to-r from-blue-50 to-white border-l-4 border-blue-600">
+          <div className="flex justify-between items-start">
+            <div>
+              <h2 className="text-2xl font-bold text-blue-900 mb-2">PHIẾU HỌC TẬP SỐ 1: "SỰ BIẾN HÌNH CỦA KHOÁNG VẬT"</h2>
+              <p className="text-gray-600 font-medium">Học phần: Địa chất Đệ tứ & Vỏ phong hóa (Chương 1)</p>
+              <div className="flex items-center gap-4 mt-3 text-sm text-blue-800">
+                <span className="flex items-center gap-1"><Users size={16}/> Think-Pair-Share (14 SV / 4 Nhóm)</span>
+                <span className="flex items-center gap-1"><Calendar size={16}/> Thời gian: 10 phút</span>
+                <span className="flex items-center gap-1"><Trophy size={16}/> 10% Điểm Thường xuyên</span>
+              </div>
+            </div>
+            <Button 
+              variant={showWorksheetKey ? "danger" : "primary"}
+              onClick={() => setShowWorksheetKey(!showWorksheetKey)}
+              className="shadow-md"
+            >
+              {showWorksheetKey ? <EyeOff size={18}/> : <Eye size={18}/>}
+              {showWorksheetKey ? "Đóng Đáp Án (GV)" : "Mở Đáp Án (GV)"}
+            </Button>
+          </div>
+          <div className="mt-4 p-3 bg-white rounded border border-blue-100 text-sm text-gray-700">
+            <strong>MỤC TIÊU:</strong> Xác định sự biến đổi của các khoáng vật nguyên sinh từ đá gốc thành khoáng vật thứ sinh (sản phẩm) dưới tác động của quá trình phong hóa hóa học.
+          </div>
+        </Card>
+
+        {/* Nội dung làm bài */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          {/* Cột Trái: Nhiệm vụ 1 */}
+          <Card className="p-6 shadow-sm border border-gray-200">
+            <h3 className="text-lg font-bold text-gray-800 mb-4 flex items-center gap-2">
+              <CheckSquare className="text-green-600"/> NHIỆM VỤ 1: TÌM CẶP GHÉP ĐÔI (6.0đ)
+            </h3>
+            <p className="text-sm text-gray-500 mb-4">Thảo luận cặp đôi và chọn đáp án ở Cột B tương ứng với Cột A.</p>
+            
+            <div className="space-y-3">
+              {colA.map((item, idx) => (
+                <div key={item.id} className="flex items-center gap-3 bg-gray-50 p-2 rounded-lg border border-gray-100">
+                  <div className="flex-1 font-medium text-sm text-gray-800">{item.text}</div>
+                  <div className="flex items-center gap-2">
+                    <span className="text-gray-400 font-bold">Nối với:</span>
+                    <select 
+                      className={`border-2 rounded p-1.5 outline-none font-bold cursor-pointer transition-colors ${
+                        showWorksheetKey 
+                          ? (worksheetAnswers[`match${item.id}`] === item.ans ? 'border-green-500 bg-green-50 text-green-700' : 'border-red-500 bg-red-50 text-red-700')
+                          : 'border-blue-300 focus:border-blue-600'
+                      }`}
+                      value={worksheetAnswers[`match${item.id}`]}
+                      onChange={(e) => setWorksheetAnswers({...worksheetAnswers, [`match${item.id}`]: e.target.value})}
+                    >
+                      <option value="">--</option>
+                      {['A', 'B', 'C', 'D'].map(opt => <option key={opt} value={opt}>{opt}</option>)}
+                    </select>
+                  </div>
+                  {showWorksheetKey && (
+                    <div className="w-8 text-center font-bold">
+                      {worksheetAnswers[`match${item.id}`] === item.ans 
+                        ? <span className="text-green-600">✔</span> 
+                        : <span className="text-red-500">{item.ans}</span>}
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+
+            <div className="mt-6 border-t pt-4">
+              <h4 className="text-xs font-bold text-gray-500 uppercase mb-2">DANH SÁCH SẢN PHẨM PHONG HÓA (CỘT B)</h4>
+              <ul className="space-y-2 text-sm text-gray-700">
+                {colB.map(b => (
+                  <li key={b.id} className="bg-blue-50/50 p-2 rounded border border-blue-50">{b.text}</li>
+                ))}
+              </ul>
+            </div>
+          </Card>
+
+          {/* Cột Phải: Nhiệm vụ 2 */}
+          <Card className="p-6 shadow-sm border border-gray-200">
+            <h3 className="text-lg font-bold text-gray-800 mb-4 flex items-center gap-2">
+              <HelpCircle className="text-orange-500"/> NHIỆM VỤ 2: GIẢI THÍCH (4.0đ)
+            </h3>
+            <p className="text-sm text-gray-500 mb-4">Giải thích ngắn gọn CƠ CHẾ HÓA HỌC dẫn đến sự "biến hình".</p>
+            
+            <div className="space-y-6">
+              <div>
+                <label className="block font-medium text-sm text-gray-800 mb-2">
+                  <span className="text-blue-600 font-bold">A.</span> Vì sao Feldspar lại biến đổi thành Kaolinit? Trải qua quá trình hóa học chủ đạo nào?
+                </label>
+                <textarea 
+                  className="w-full border border-gray-300 rounded-lg p-3 text-sm focus:outline-none focus:border-blue-500 min-h-[80px]"
+                  placeholder="Nhập câu trả lời của nhóm..."
+                  value={worksheetAnswers.explainA}
+                  onChange={(e) => setWorksheetAnswers({...worksheetAnswers, explainA: e.target.value})}
+                />
+              </div>
+
+              <div>
+                <label className="block font-medium text-sm text-gray-800 mb-2">
+                  <span className="text-blue-600 font-bold">B.</span> Vì sao Thạch anh (Quartz) lại được coi là "Trơ"?
+                </label>
+                <textarea 
+                  className="w-full border border-gray-300 rounded-lg p-3 text-sm focus:outline-none focus:border-blue-500 min-h-[80px]"
+                  placeholder="Nhập câu trả lời của nhóm..."
+                  value={worksheetAnswers.explainB}
+                  onChange={(e) => setWorksheetAnswers({...worksheetAnswers, explainB: e.target.value})}
+                />
+              </div>
+            </div>
+          </Card>
+        </div>
+
+        {/* Đáp án & Hướng dẫn chấm (Chỉ hiện khi GV bật) */}
+        {showWorksheetKey && (
+          <Card className="p-6 border-2 border-green-500 bg-green-50 animate-fade-in shadow-lg">
+            <h3 className="text-lg font-bold text-green-800 mb-4 flex items-center border-b border-green-200 pb-2">
+              <CheckCircle className="mr-2"/> ĐÁP ÁN & HƯỚNG DẪN CHẤM ĐIỂM (TỔNG 10 ĐIỂM)
+            </h3>
+            
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-8 text-sm">
+              <div>
+                <h4 className="font-bold text-green-700 mb-2">1. Nhiệm vụ 1 (6.0 điểm)</h4>
+                <p className="text-green-900 mb-2"><em>Mỗi câu ghép đúng: 1.5 điểm.</em></p>
+                <ul className="space-y-1 text-green-800 font-medium">
+                  <li>✔ 1 - D: Feldspar $\rightarrow$ Kaolinit, Gibsit.</li>
+                  <li>✔ 2 - B: Quartz (Thạch anh) $\rightarrow$ "Trơ", sót lại.</li>
+                  <li>✔ 3 - A: Olivin / Pyroxen $\rightarrow$ Goethit, Hematit + Montmorillonit.</li>
+                  <li>✔ 4 - C: Mica $\rightarrow$ Hydromica $\rightarrow$ Kaolinit.</li>
+                </ul>
+              </div>
+
+              <div>
+                <h4 className="font-bold text-green-700 mb-2">2. Nhiệm vụ 2 (4.0 điểm)</h4>
+                <p className="text-green-900 mb-2"><em>Mỗi ý giải thích đúng: 2.0 điểm.</em></p>
+                <div className="space-y-3 text-green-800">
+                  <p><strong>Ý A (2.0đ):</strong> Feldspar biến đổi thành Kaolinit chủ yếu qua quá trình <strong>Thủy phân (Hydrolysis)</strong>. Dưới tác dụng của ion $H^+$ trong nước (và CO2), các ion kim loại kiềm bị cuốn đi, cấu trúc mạng tinh thể vỡ tạo thành keo nhôm-silic $\rightarrow$ sét Kaolinit.</p>
+                  <p><strong>Ý B (2.0đ):</strong> Thạch anh ($SiO_2$) là khoáng vật "Trơ" vì rất bền vững với quá trình phong hóa hóa học (không bị thủy phân, không bị oxy hóa trong điều kiện biểu sinh). Nằm lại tại chỗ dạng hạt sót.</p>
+                </div>
+              </div>
+            </div>
+            
+            <div className="mt-4 pt-4 border-t border-green-200 text-green-800 text-xs italic">
+              <strong>* Kịch bản điều phối:</strong> Bước 1 (Think - 1p cá nhân) $\rightarrow$ Bước 2 (Pair - 5p cặp đôi) $\rightarrow$ Bước 3 (Share - 10p gọi ngẫu nhiên trình bày & nhận xét).
+            </div>
+          </Card>
+        )}
+      </div>
+    );
+  };
     return (
         <Card className="overflow-hidden border-2 border-purple-300 shadow-lg">
             {/* Header Form */}
