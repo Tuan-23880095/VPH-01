@@ -3,7 +3,7 @@ import {
   Users, CheckSquare, Trophy, BookOpen, 
   Play, Pause, RotateCcw, HelpCircle, Layout, 
   CloudLightning, Loader, Save, CheckCircle, Calendar, Info,
-  User, Repeat, Monitor, FileText, Eye, EyeOff
+  FileText, Eye, EyeOff
 } from 'lucide-react';
 
 // --- Link Google Script cố định cho phần Đánh giá chéo (Sinh viên) ---
@@ -48,7 +48,6 @@ const courseSessions = [
   { id: 12, title: "Buổi 12: Tổng kết & Ôn tập", duration: 150, stages: [{ id: 1, title: "Từ khóa", time: 20, content: "Slido." }, { id: 2, title: "Game", time: 50, content: "Đấu trường." }, { id: 3, title: "Giải mã", time: 40, content: "Luyện kỹ năng." }, { id: 4, title: "Công bố", time: 40, content: "Minh bạch điểm." }] }
 ];
 
-// --- TIÊU CHÍ ĐÁNH GIÁ CHÉO ---
 const criteriaTeamwork = [
   "1. THAM DỰ & PHỐI HỢP (0-2.5đ)",
   "2. QUẢN LÝ CÔNG VIỆC (0-2.5đ)",
@@ -63,23 +62,23 @@ const criteriaDiscussion = [
   "4. THÁI ĐỘ LẮNG NGHE (0-2.5đ)"
 ];
 
-// --- Main Application ---
 export default function App() {
   const [activeTab, setActiveTab] = useState('dashboard'); 
-  // --- STATE CHO PHIẾU BÀI TẬP BUỔI 2 ---
+  
+  // States cho Worksheet
   const [worksheetAnswers, setWorksheetAnswers] = useState({
     match1: '', match2: '', match3: '', match4: '',
     explainA: '', explainB: ''
   });
-  const [showWorksheetKey, setShowWorksheetKey] = useState(false); // Ẩn/hiện đáp án
-  // Trạng thái buổi học hiện tại
+  const [showWorksheetKey, setShowWorksheetKey] = useState(false);
+
+  // States lớp học
   const [currentSessionIdx, setCurrentSessionIdx] = useState(0);
   const currentSession = courseSessions[currentSessionIdx];
   const [currentStage, setCurrentStage] = useState(0);
   const [timeLeft, setTimeLeft] = useState(courseSessions[0].stages[0].time * 60);
   const [timerActive, setTimerActive] = useState(false);
 
-  // Google Sheet Integration (Dành cho Giảng Viên)
   const [scriptUrl, setScriptUrl] = useState(() => localStorage.getItem('GEO_CLASS_SCRIPT_URL') || '');
   const [lastSyncStatus, setLastSyncStatus] = useState(null); 
   const [isSyncingAll, setIsSyncingAll] = useState(false);
@@ -101,7 +100,6 @@ export default function App() {
     return () => clearInterval(interval);
   }, [timerActive, timeLeft]);
 
-  // --- DỮ LIỆU SINH VIÊN (Cập nhật theo bảng mới nhất) ---
   const [students, setStudents] = useState([
     { id: 1, name: "LÂM YẾN NHI", code: "23160019", group: 1, role: "NT", groupName: "1 Cá Vàng", attendance: 10, discussion: 0, groupReport: 0, regular: 0, midterm: 0 },
     { id: 2, name: "NGUYỄN LÊ THẢO TIÊN", code: "23160007", group: 1, role: "", groupName: "1 Cá Vàng", attendance: 10, discussion: 0, groupReport: 0, regular: 0, midterm: 0 },
@@ -119,20 +117,16 @@ export default function App() {
     { id: 14, name: "VŨ HOÀNG ANH THƯ", code: "23160024", group: 4, role: "", groupName: "Phúc Lộc Thọ", attendance: 10, discussion: 0, groupReport: 0, regular: 0, midterm: 0 },
   ]);
 
-  // Các state tiện ích lớp học
   const [groupReportInputs, setGroupReportInputs] = useState({ 1: 0, 2: 0, 3: 0, 4: 0 });
   const [pickedStudent, setPickedStudent] = useState(null);
   const [isRolling, setIsRolling] = useState(false);
-// === BẮT ĐẦU: ĐOẠN CODE BỔ SUNG CÁC HÀM BỊ THIẾU ===
 
-  // 1. Hàm format thời gian đếm ngược
   const formatTime = (seconds) => {
     const m = Math.floor(seconds / 60);
     const s = seconds % 60;
     return `${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
   };
 
-  // 2. Hàm gọi ngẫu nhiên sinh viên
   const pickRandomStudent = () => {
     if (isRolling) return;
     setIsRolling(true);
@@ -141,79 +135,46 @@ export default function App() {
       const randomIdx = Math.floor(Math.random() * students.length);
       setPickedStudent(students[randomIdx]);
       counter++;
-      if (counter > 15) { // Quay 15 lần rồi dừng
+      if (counter > 15) {
         clearInterval(interval);
         setIsRolling(false);
       }
     }, 100);
   };
 
-  // 3. Hàm cập nhật điểm cá nhân (Chuyên cần, Thảo luận, GK...)
   const updateStudentScore = (id, field, val) => {
     let numVal = parseFloat(val);
     if (isNaN(numVal)) numVal = 0;
     if (numVal > 10) numVal = 10;
     if (numVal < 0) numVal = 0;
-
-    setStudents(prev => prev.map(s => 
-      s.id === id ? { ...s, [field]: numVal } : s
-    ));
+    setStudents(prev => prev.map(s => s.id === id ? { ...s, [field]: numVal } : s));
   };
 
-  // 4. Hàm chấm điểm nhóm nhanh (Cập nhật cho tất cả SV trong nhóm)
   const updateGroupReportScore = (groupId, val) => {
     let numVal = parseFloat(val);
     if (isNaN(numVal)) numVal = 0;
     if (numVal > 10) numVal = 10;
     if (numVal < 0) numVal = 0;
-
     setGroupReportInputs(prev => ({ ...prev, [groupId]: numVal }));
-    setStudents(prev => prev.map(s => 
-      s.group === parseInt(groupId) ? { ...s, groupReport: numVal } : s
-    ));
+    setStudents(prev => prev.map(s => s.group === parseInt(groupId) ? { ...s, groupReport: numVal } : s));
   };
 
-  // 5. Hàm điểm danh nhanh bằng nút gạt
   const toggleAttendance = (id) => {
-    setStudents(prev => prev.map(s => 
-      s.id === id ? { ...s, attendance: s.attendance > 0 ? 0 : 10 } : s
-    ));
+    setStudents(prev => prev.map(s => s.id === id ? { ...s, attendance: s.attendance > 0 ? 0 : 10 } : s));
   };
 
-  // === KẾT THÚC: ĐOẠN CODE BỔ SUNG ===
-  // --- STATE CHO ĐÁNH GIÁ CHÉO (MỚI) ---
   const [evaluator, setEvaluator] = useState("");
-  const [evalType, setEvalType] = useState('teamwork'); // 'teamwork' | 'discussion'
-  const [targetGroup, setTargetGroup] = useState(1); // 1, 2, 3, 4
+  const [evalType, setEvalType] = useState('teamwork'); 
+  const [targetGroup, setTargetGroup] = useState(1); 
   const [showRubricModal, setShowRubricModal] = useState(false);
-  
-  // Lưu điểm dưới dạng dictionary: key = `${evalType}_${studentCode}_${criteriaIndex}`
   const [peerScores, setPeerScores] = useState({});
 
-  // Lọc sinh viên thuộc nhóm đang được chọn để đánh giá
   const targetStudents = students.filter(s => s.group === targetGroup);
   const currentCriteria = evalType === 'teamwork' ? criteriaTeamwork : criteriaDiscussion;
 
-  // --- TÍNH ĐIỂM QUÁ TRÌNH LỚP HỌC ---
   const calculateProcessScore = (s) => {
     return ((s.attendance + s.discussion + s.groupReport + s.regular + (s.midterm * 2)) / 6).toFixed(1);
   };
-
-  // --- HÀM GỬI LÊN SHEET GIẢNG VIÊN ---
-  const sendStudentData = useCallback(async (student) => {
-    if (!scriptUrl) return;
-    const payload = {
-      role: "Cập nhật Điểm Quá trình", evaluator: "ThS. Đinh Quốc Tuấn",
-      groupName: `${student.name} (${student.code})`, comment: "Cập nhật từ App Hệ thống",
-      headers: ["MSSV", "Nhóm", "Chuyên cần (10%)", "Thảo luận (10%)", "Báo cáo (10%)", "Thường xuyên (10%)", "Giữa kỳ (20%)", "Điểm Quá Trình (Hệ 10)"],
-      scores: [student.code, `Nhóm ${student.group}`, student.attendance, student.discussion, student.groupReport, student.regular, student.midterm, calculateProcessScore(student)]
-    };
-    try {
-      await fetch(scriptUrl, { method: 'POST', mode: 'no-cors', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
-      setLastSyncStatus(`Đã lưu: ${student.name}`);
-      setTimeout(() => setLastSyncStatus(null), 3000);
-    } catch (error) { setLastSyncStatus("Lỗi kết nối!"); }
-  }, [scriptUrl]);
 
   const handleSyncAll = async () => {
     if (!scriptUrl) { setLastSyncStatus("Vui lòng nhập URL Web App GV trước!"); setTimeout(() => setLastSyncStatus(null), 3000); return; }
@@ -233,8 +194,6 @@ export default function App() {
     finally { setIsSyncingAll(false); setTimeout(() => setLastSyncStatus(null), 4000); }
   };
 
-
-  // --- HÀM CHO ĐÁNH GIÁ CHÉO ---
   const handlePeerScoreChange = (studentCode, cIdx, val) => {
     const key = `${evalType}_${studentCode}_${cIdx}`;
     if (val === '') {
@@ -245,7 +204,6 @@ export default function App() {
     if(isNaN(numVal)) numVal = 0;
     if(numVal > 2.5) numVal = 2.5;
     if(numVal < 0) numVal = 0;
-
     setPeerScores(prev => ({ ...prev, [key]: numVal }));
   };
 
@@ -262,58 +220,35 @@ export default function App() {
         alert("Vui lòng chọn Tên của bạn ở mục 'Người đánh giá' trước khi gửi!");
         return;
     }
-
     setIsSyncingAll(true);
-    
-    // Tìm thông tin nhóm đang đánh giá
     const tGroupInfo = targetStudents[0];
     const groupLabel = tGroupInfo ? `Nhóm ${targetGroup} - ${tGroupInfo.groupName}` : `Nhóm ${targetGroup}`;
     const evalLabel = evalType === 'teamwork' ? 'Đánh Giá Làm Việc Nhóm' : 'Đánh Giá Thảo Luận Lớp';
-
     let payload = {
-        role: "Sinh Viên Đánh Giá Chéo",
-        groupName: groupLabel,
-        evaluator: evaluator,
-        comment: evalLabel,
-        headers: ["Tiêu chí", ...targetStudents.map(s => s.name)],
-        scores: []
+        role: "Sinh Viên Đánh Giá Chéo", groupName: groupLabel, evaluator: evaluator, comment: evalLabel,
+        headers: ["Tiêu chí", ...targetStudents.map(s => s.name)], scores: ["Tổng điểm"]
     };
-
-    // Gửi Tổng điểm thay vì từng tiêu chí chi tiết cho gọn file CSV của GV
-    payload.scores.push("Tổng điểm");
-    for(let i=0; i < targetStudents.length; i++) {
-        payload.scores.push(getPeerTotal(targetStudents[i].code));
-    }
-
+    for(let i=0; i < targetStudents.length; i++) { payload.scores.push(getPeerTotal(targetStudents[i].code)); }
     try {
-        await fetch(PEER_REVIEW_SCRIPT_URL, {
-            method: 'POST', mode: 'no-cors',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(payload)
-        });
+        await fetch(PEER_REVIEW_SCRIPT_URL, { method: 'POST', mode: 'no-cors', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
         alert(`Đã gửi phiếu Đánh giá ${groupLabel} thành công!`);
-    } catch (error) {
-        alert("Lỗi kết nối mạng khi gửi dữ liệu đánh giá!");
-    } finally {
-        setIsSyncingAll(false);
-    }
+    } catch (error) { alert("Lỗi kết nối mạng khi gửi dữ liệu đánh giá!"); } 
+    finally { setIsSyncingAll(false); }
   };
 
   const handleClearPeerData = () => {
     if(window.confirm("Bạn có chắc chắn muốn xóa nháp của trang đánh giá hiện tại?")) {
         const newScores = { ...peerScores };
-        // Chỉ xóa dữ liệu của loại đánh giá và nhóm đang hiển thị
         targetStudents.forEach(s => {
-            currentCriteria.forEach((_, cIdx) => {
-                delete newScores[`${evalType}_${s.code}_${cIdx}`];
-            });
+            currentCriteria.forEach((_, cIdx) => { delete newScores[`${evalType}_${s.code}_${cIdx}`]; });
         });
         setPeerScores(newScores);
     }
   }
 
-
-  // --- VIEWS ---
+  // ==============================
+  // VIEWS (CÁC HÀM RENDER)
+  // ==============================
   const renderStatusToast = () => {
     if (!lastSyncStatus) return null;
     return (
@@ -334,7 +269,6 @@ export default function App() {
                       <button onClick={() => setShowRubricModal(false)} className="text-gray-500 hover:text-red-600 font-bold text-xl">&times;</button>
                   </div>
                   <div className="p-6 overflow-y-auto flex-1 text-sm text-gray-700 space-y-6">
-                      
                       <div>
                           <h2 className="font-bold text-lg text-purple-800 mb-2 border-b border-purple-200 pb-2">1. TIÊU CHÍ LÀM VIỆC NHÓM (Dành cho thành viên cùng nhóm/nhóm khác)</h2>
                           <table className="w-full border-collapse">
@@ -352,7 +286,6 @@ export default function App() {
                               </tbody>
                           </table>
                       </div>
-
                       <div>
                           <h2 className="font-bold text-lg text-blue-800 mb-2 border-b border-blue-200 pb-2">2. TIÊU CHÍ THẢO LUẬN TRÊN LỚP (Dành cho Seminar/Hỏi đáp)</h2>
                           <table className="w-full border-collapse">
@@ -526,14 +459,9 @@ export default function App() {
     </Card>
   );
 
-  // View: Tab Đánh Giá Chéo (LÀM LẠI THEO YÊU CẦU MỚI)
-  // ==========================================
-  // 1. View: Tab Đánh Giá Chéo 
-  // ==========================================
   const renderPeerReview = () => {
     return (
         <Card className="overflow-hidden border-2 border-purple-300 shadow-lg">
-            {/* Header Form */}
             <div className="p-6 bg-gradient-to-r from-purple-50 to-white border-b border-purple-100 flex flex-col gap-4">
                 <div className="flex justify-between items-center mb-2">
                     <h2 className="text-xl font-bold text-purple-900 flex items-center"><Users className="mr-2"/> Form Đánh Giá Sinh Viên</h2>
@@ -541,9 +469,7 @@ export default function App() {
                         <Info size={14}/> Tiêu chí
                     </Button>
                 </div>
-
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                    {/* B1. Chọn người đánh giá */}
                     <div className="bg-white p-3 rounded-lg border border-gray-200 shadow-sm">
                         <label className="block text-xs font-bold text-gray-500 uppercase mb-1">1. Tên của bạn <span className="text-red-500">*</span></label>
                         <select value={evaluator} onChange={(e) => setEvaluator(e.target.value)} className="w-full py-1.5 px-2 border-b-2 border-purple-400 outline-none text-purple-900 font-bold bg-transparent">
@@ -552,8 +478,6 @@ export default function App() {
                             <option value="Giảng Viên / Khách">Giảng Viên / Khác</option>
                         </select>
                     </div>
-
-                    {/* B2. Chọn loại đánh giá */}
                     <div className="bg-white p-3 rounded-lg border border-gray-200 shadow-sm">
                         <label className="block text-xs font-bold text-gray-500 uppercase mb-1">2. Loại đánh giá <span className="text-red-500">*</span></label>
                         <select value={evalType} onChange={(e) => setEvalType(e.target.value)} className="w-full py-1.5 px-2 border-b-2 border-blue-400 outline-none text-blue-900 font-bold bg-transparent">
@@ -561,8 +485,6 @@ export default function App() {
                             <option value="discussion">Thảo Luận Lớp (Seminar/Hỏi đáp)</option>
                         </select>
                     </div>
-
-                    {/* B3. Chọn nhóm để đánh giá */}
                     <div className="bg-white p-3 rounded-lg border border-gray-200 shadow-sm">
                         <label className="block text-xs font-bold text-gray-500 uppercase mb-1">3. Nhóm được đánh giá <span className="text-red-500">*</span></label>
                         <select value={targetGroup} onChange={(e) => setTargetGroup(parseInt(e.target.value))} className="w-full py-1.5 px-2 border-b-2 border-green-400 outline-none text-green-900 font-bold bg-transparent">
@@ -574,14 +496,11 @@ export default function App() {
                     </div>
                 </div>
             </div>
-
-            {/* Bảng chấm điểm động */}
             <div className="p-6">
                 <div className="flex items-center gap-2 mb-4 bg-blue-50 p-3 rounded text-blue-800 text-sm border border-blue-100">
                     <CheckCircle size={16} className="text-green-600"/>
                     <span>Đang hiển thị bảng điểm <strong>{evalType === 'teamwork' ? 'Làm Việc Nhóm' : 'Thảo Luận Trên Lớp'}</strong> cho <strong>Nhóm {targetGroup}</strong>. Điểm tối đa mỗi ô: <strong>2.5đ</strong></span>
                 </div>
-                
                 <div className="overflow-x-auto border rounded-lg shadow-sm">
                     <table className="min-w-full text-sm">
                         <thead className="bg-gray-800 text-white font-bold text-xs">
@@ -631,8 +550,6 @@ export default function App() {
                         </tfoot>
                     </table>
                 </div>
-
-                {/* Bottom Actions */}
                 <div className="flex flex-col md:flex-row gap-4 justify-between items-center pt-6 mt-6 border-t border-gray-200">
                     <button onClick={handleClearPeerData} className="text-gray-400 hover:text-red-500 text-sm font-medium transition">
                         Xóa làm lại bảng này
@@ -647,12 +564,8 @@ export default function App() {
             </div>
         </Card>
     );
-  }; // <--- LƯU Ý DẤU ĐÓNG NGOẶC CỦA HÀM ĐÁNH GIÁ CHÉO NẰM Ở ĐÂY
+  };
 
-
-  // ==========================================
-  // 2. View: Tab Phiếu bài tập Buổi 2
-  // ==========================================
   const renderWorksheetSession2 = () => {
     const colA = [
       { id: 1, text: "1. Feldspar (Tràng thạch)", ans: 'D' },
@@ -670,7 +583,6 @@ export default function App() {
 
     return (
       <div className="space-y-6 animate-fade-in">
-        {/* Header Phiếu */}
         <Card className="p-6 bg-gradient-to-r from-blue-50 to-white border-l-4 border-blue-600">
           <div className="flex justify-between items-start">
             <div>
@@ -682,11 +594,7 @@ export default function App() {
                 <span className="flex items-center gap-1"><Trophy size={16}/> 10% Điểm Thường xuyên</span>
               </div>
             </div>
-            <Button 
-              variant={showWorksheetKey ? "danger" : "primary"}
-              onClick={() => setShowWorksheetKey(!showWorksheetKey)}
-              className="shadow-md"
-            >
+            <Button variant={showWorksheetKey ? "danger" : "primary"} onClick={() => setShowWorksheetKey(!showWorksheetKey)} className="shadow-md">
               {showWorksheetKey ? <EyeOff size={18}/> : <Eye size={18}/>}
               {showWorksheetKey ? "Đóng Đáp Án (GV)" : "Mở Đáp Án (GV)"}
             </Button>
@@ -696,17 +604,14 @@ export default function App() {
           </div>
         </Card>
 
-        {/* Nội dung làm bài */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          {/* Cột Trái: Nhiệm vụ 1 */}
           <Card className="p-6 shadow-sm border border-gray-200">
             <h3 className="text-lg font-bold text-gray-800 mb-4 flex items-center gap-2">
               <CheckSquare className="text-green-600"/> NHIỆM VỤ 1: TÌM CẶP GHÉP ĐÔI (6.0đ)
             </h3>
             <p className="text-sm text-gray-500 mb-4">Thảo luận cặp đôi và chọn đáp án ở Cột B tương ứng với Cột A.</p>
-            
             <div className="space-y-3">
-              {colA.map((item, idx) => (
+              {colA.map((item) => (
                 <div key={item.id} className="flex items-center gap-3 bg-gray-50 p-2 rounded-lg border border-gray-100">
                   <div className="flex-1 font-medium text-sm text-gray-800">{item.text}</div>
                   <div className="flex items-center gap-2">
@@ -726,15 +631,12 @@ export default function App() {
                   </div>
                   {showWorksheetKey && (
                     <div className="w-8 text-center font-bold">
-                      {worksheetAnswers[`match${item.id}`] === item.ans 
-                        ? <span className="text-green-600">✔</span> 
-                        : <span className="text-red-500">{item.ans}</span>}
+                      {worksheetAnswers[`match${item.id}`] === item.ans ? <span className="text-green-600">✔</span> : <span className="text-red-500">{item.ans}</span>}
                     </div>
                   )}
                 </div>
               ))}
             </div>
-
             <div className="mt-6 border-t pt-4">
               <h4 className="text-xs font-bold text-gray-500 uppercase mb-2">DANH SÁCH SẢN PHẨM PHONG HÓA (CỘT B)</h4>
               <ul className="space-y-2 text-sm text-gray-700">
@@ -744,76 +646,126 @@ export default function App() {
               </ul>
             </div>
           </Card>
-
-          {/* Cột Phải: Nhiệm vụ 2 */}
           <Card className="p-6 shadow-sm border border-gray-200">
             <h3 className="text-lg font-bold text-gray-800 mb-4 flex items-center gap-2">
               <HelpCircle className="text-orange-500"/> NHIỆM VỤ 2: GIẢI THÍCH (4.0đ)
             </h3>
             <p className="text-sm text-gray-500 mb-4">Giải thích ngắn gọn CƠ CHẾ HÓA HỌC dẫn đến sự "biến hình".</p>
-            
             <div className="space-y-6">
               <div>
-                <label className="block font-medium text-sm text-gray-800 mb-2">
-                  <span className="text-blue-600 font-bold">A.</span> Vì sao Feldspar lại biến đổi thành Kaolinit? Trải qua quá trình hóa học chủ đạo nào?
-                </label>
+                <label className="block font-medium text-sm text-gray-800 mb-2"><span className="text-blue-600 font-bold">A.</span> Vì sao Feldspar lại biến đổi thành Kaolinit? Trải qua quá trình hóa học chủ đạo nào?</label>
                 <textarea 
                   className="w-full border border-gray-300 rounded-lg p-3 text-sm focus:outline-none focus:border-blue-500 min-h-[80px]"
-                  placeholder="Nhập câu trả lời của nhóm..."
-                  value={worksheetAnswers.explainA}
-                  onChange={(e) => setWorksheetAnswers({...worksheetAnswers, explainA: e.target.value})}
+                  placeholder="Nhập câu trả lời của nhóm..." value={worksheetAnswers.explainA} onChange={(e) => setWorksheetAnswers({...worksheetAnswers, explainA: e.target.value})}
                 />
               </div>
-
               <div>
-                <label className="block font-medium text-sm text-gray-800 mb-2">
-                  <span className="text-blue-600 font-bold">B.</span> Vì sao Thạch anh (Quartz) lại được coi là "Trơ"?
-                </label>
+                <label className="block font-medium text-sm text-gray-800 mb-2"><span className="text-blue-600 font-bold">B.</span> Vì sao Thạch anh (Quartz) lại được coi là "Trơ"?</label>
                 <textarea 
                   className="w-full border border-gray-300 rounded-lg p-3 text-sm focus:outline-none focus:border-blue-500 min-h-[80px]"
-                  placeholder="Nhập câu trả lời của nhóm..."
-                  value={worksheetAnswers.explainB}
-                  onChange={(e) => setWorksheetAnswers({...worksheetAnswers, explainB: e.target.value})}
+                  placeholder="Nhập câu trả lời của nhóm..." value={worksheetAnswers.explainB} onChange={(e) => setWorksheetAnswers({...worksheetAnswers, explainB: e.target.value})}
                 />
               </div>
             </div>
           </Card>
         </div>
 
-        {/* Đáp án & Hướng dẫn chấm (Chỉ hiện khi GV bật) */}
         {showWorksheetKey && (
           <Card className="p-6 border-2 border-green-500 bg-green-50 animate-fade-in shadow-lg">
             <h3 className="text-lg font-bold text-green-800 mb-4 flex items-center border-b border-green-200 pb-2">
               <CheckCircle className="mr-2"/> ĐÁP ÁN & HƯỚNG DẪN CHẤM ĐIỂM (TỔNG 10 ĐIỂM)
             </h3>
-            
             <div className="grid grid-cols-1 md:grid-cols-2 gap-8 text-sm">
               <div>
                 <h4 className="font-bold text-green-700 mb-2">1. Nhiệm vụ 1 (6.0 điểm)</h4>
                 <p className="text-green-900 mb-2"><em>Mỗi câu ghép đúng: 1.5 điểm.</em></p>
                 <ul className="space-y-1 text-green-800 font-medium">
-                  <li>✔ 1 - D: Feldspar $\rightarrow$ Kaolinit, Gibsit.</li>
-                  <li>✔ 2 - B: Quartz (Thạch anh) $\rightarrow$ "Trơ", sót lại.</li>
-                  <li>✔ 3 - A: Olivin / Pyroxen $\rightarrow$ Goethit, Hematit + Montmorillonit.</li>
-                  <li>✔ 4 - C: Mica $\rightarrow$ Hydromica $\rightarrow$ Kaolinit.</li>
+                  <li>✔ 1 - D: Feldspar → Kaolinit, Gibsit.</li>
+                  <li>✔ 2 - B: Quartz (Thạch anh) → "Trơ", sót lại.</li>
+                  <li>✔ 3 - A: Olivin / Pyroxen → Goethit, Hematit + Montmorillonit.</li>
+                  <li>✔ 4 - C: Mica → Hydromica → Kaolinit.</li>
                 </ul>
               </div>
-
               <div>
                 <h4 className="font-bold text-green-700 mb-2">2. Nhiệm vụ 2 (4.0 điểm)</h4>
                 <p className="text-green-900 mb-2"><em>Mỗi ý giải thích đúng: 2.0 điểm.</em></p>
                 <div className="space-y-3 text-green-800">
-                  <p><strong>Ý A (2.0đ):</strong> Feldspar biến đổi thành Kaolinit chủ yếu qua quá trình <strong>Thủy phân (Hydrolysis)</strong>. Dưới tác dụng của ion $H^+$ trong nước (và CO2), các ion kim loại kiềm bị cuốn đi, cấu trúc mạng tinh thể vỡ tạo thành keo nhôm-silic $\rightarrow$ sét Kaolinit.</p>
-                  <p><strong>Ý B (2.0đ):</strong> Thạch anh ($SiO_2$) là khoáng vật "Trơ" vì rất bền vững với quá trình phong hóa hóa học (không bị thủy phân, không bị oxy hóa trong điều kiện biểu sinh). Nằm lại tại chỗ dạng hạt sót.</p>
+                  <p><strong>Ý A (2.0đ):</strong> Feldspar biến đổi thành Kaolinit chủ yếu qua quá trình <strong>Thủy phân (Hydrolysis)</strong>. Dưới tác dụng của ion H+ trong nước (và CO2), các ion kim loại kiềm bị cuốn đi, cấu trúc mạng tinh thể vỡ tạo thành keo nhôm-silic → sét Kaolinit.</p>
+                  <p><strong>Ý B (2.0đ):</strong> Thạch anh (SiO2) là khoáng vật "Trơ" vì rất bền vững với quá trình phong hóa hóa học (không bị thủy phân, không bị oxy hóa trong điều kiện biểu sinh). Nằm lại tại chỗ dạng hạt sót.</p>
                 </div>
               </div>
             </div>
-            
             <div className="mt-4 pt-4 border-t border-green-200 text-green-800 text-xs italic">
-              <strong>* Kịch bản điều phối:</strong> Bước 1 (Think - 1p cá nhân) $\rightarrow$ Bước 2 (Pair - 5p cặp đôi) $\rightarrow$ Bước 3 (Share - 10p gọi ngẫu nhiên trình bày & nhận xét).
+              <strong>* Kịch bản điều phối:</strong> Bước 1 (Think - 1p cá nhân) → Bước 2 (Pair - 5p cặp đôi) → Bước 3 (Share - 10p gọi ngẫu nhiên trình bày & nhận xét).
             </div>
           </Card>
         )}
       </div>
     );
   };
+
+  return (
+    <div className="min-h-screen bg-gray-100 font-sans text-gray-800 pb-10">
+      {renderStatusToast()}
+      {renderRubricModal()}
+      
+      <header className="bg-white shadow-sm sticky top-0 z-20">
+        <div className="max-w-6xl mx-auto px-4 h-16 flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <div className="bg-blue-600 text-white p-2 rounded-lg"><Layout size={24} /></div>
+            <div>
+              <h1 className="font-bold text-xl leading-tight text-gray-900 hidden md:block">Hệ thống Quản lý GEO10065</h1>
+              <h1 className="font-bold text-lg leading-tight text-gray-900 md:hidden">GEO10065</h1>
+              <p className="text-xs text-gray-500">ThS. Đinh Quốc Tuấn</p>
+            </div>
+          </div>
+          
+          <div className="flex items-center gap-3">
+             <div className="hidden sm:flex items-center bg-blue-50 border border-blue-200 rounded-lg px-2 py-1">
+                <Calendar size={16} className="text-blue-600 mr-2"/>
+                <select className="bg-transparent font-bold text-blue-800 text-sm outline-none cursor-pointer" value={currentSessionIdx} onChange={(e) => { setCurrentSessionIdx(parseInt(e.target.value)); setCurrentStage(0); }}>
+                  {courseSessions.map((s, idx) => <option key={s.id} value={idx}>Buổi {s.id}</option>)}
+                </select>
+             </div>
+
+             <div className="flex items-center gap-2">
+               <input type="text" placeholder="Link App Script (Chỉ GV)" className="text-xs border border-gray-300 rounded px-2 py-1.5 w-24 md:w-40 focus:outline-blue-500" value={scriptUrl} onChange={(e) => setScriptUrl(e.target.value)} title="Chỉ dành cho Giảng Viên đồng bộ bảng điểm chính" />
+               <Button variant="success" onClick={handleSyncAll} disabled={isSyncingAll || !scriptUrl} className="py-1.5 px-3 text-xs md:text-sm whitespace-nowrap" title="Đồng bộ điểm lớp học lên Sheet GV">
+                  {isSyncingAll ? <Loader className="animate-spin" size={14}/> : <Save size={14}/>}
+                  <span className="hidden md:inline">Đồng bộ Lớp</span>
+               </Button>
+            </div>
+          </div>
+        </div>
+      </header>
+
+      <main className="max-w-6xl mx-auto px-4 py-6">
+        <div className="flex flex-wrap gap-2 mb-6">
+          <button onClick={() => setActiveTab('dashboard')} className={`px-4 py-2.5 rounded-full font-medium text-sm flex items-center gap-2 transition-colors ${activeTab === 'dashboard' ? 'bg-gray-900 text-white shadow-md' : 'bg-white text-gray-600 hover:bg-gray-200'}`}>
+            <Layout size={16}/> Điều khiển
+          </button>
+          <button onClick={() => setActiveTab('worksheet')} className={`px-4 py-2.5 rounded-full font-medium text-sm flex items-center gap-2 transition-colors ${activeTab === 'worksheet' ? 'bg-orange-600 text-white shadow-md' : 'bg-white text-gray-600 hover:bg-gray-200 border border-orange-200'}`}>
+            <FileText size={16} className={activeTab === 'worksheet' ? 'text-white' : 'text-orange-600'}/> Phiếu Bài Tập (B.2)
+          </button>
+          <button onClick={() => setActiveTab('attendance')} className={`px-4 py-2.5 rounded-full font-medium text-sm flex items-center gap-2 transition-colors ${activeTab === 'attendance' ? 'bg-blue-600 text-white shadow-md' : 'bg-white text-gray-600 hover:bg-gray-200'}`}>
+            <CheckSquare size={16}/> Điểm danh
+          </button>
+          <button onClick={() => setActiveTab('scoring')} className={`px-4 py-2.5 rounded-full font-medium text-sm flex items-center gap-2 transition-colors ${activeTab === 'scoring' ? 'bg-green-600 text-white shadow-md' : 'bg-white text-gray-600 hover:bg-gray-200'}`}>
+            <Trophy size={16}/> Điểm GV (60%)
+          </button>
+          <button onClick={() => setActiveTab('peerReview')} className={`px-4 py-2.5 rounded-full font-medium text-sm flex items-center gap-2 transition-colors ${activeTab === 'peerReview' ? 'bg-purple-600 text-white shadow-md' : 'bg-white text-gray-600 hover:bg-gray-200 border border-purple-200'}`}>
+            <Users size={16} className={activeTab === 'peerReview' ? 'text-white' : 'text-purple-600'}/> SV Đánh Giá Chéo
+          </button>
+        </div>
+
+        <div className="animate-fade-in">
+          {activeTab === 'dashboard' && renderDashboard()}
+          {activeTab === 'attendance' && renderAttendance()}
+          {activeTab === 'scoring' && renderScoring()}
+          {activeTab === 'peerReview' && renderPeerReview()}
+          {activeTab === 'worksheet' && renderWorksheetSession2()}
+        </div>
+      </main>
+    </div>
+  );
+}
