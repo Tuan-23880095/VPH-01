@@ -527,8 +527,132 @@ export default function App() {
   );
 
   // View: Tab Đánh Giá Chéo (LÀM LẠI THEO YÊU CẦU MỚI)
+  // ==========================================
+  // 1. View: Tab Đánh Giá Chéo 
+  // ==========================================
   const renderPeerReview = () => {
-    // View: Tab Phiếu bài tập Buổi 2
+    return (
+        <Card className="overflow-hidden border-2 border-purple-300 shadow-lg">
+            {/* Header Form */}
+            <div className="p-6 bg-gradient-to-r from-purple-50 to-white border-b border-purple-100 flex flex-col gap-4">
+                <div className="flex justify-between items-center mb-2">
+                    <h2 className="text-xl font-bold text-purple-900 flex items-center"><Users className="mr-2"/> Form Đánh Giá Sinh Viên</h2>
+                    <Button variant="outline" className="bg-white border-purple-500 text-purple-700 hover:bg-purple-100 text-xs py-1" onClick={() => setShowRubricModal(true)}>
+                        <Info size={14}/> Tiêu chí
+                    </Button>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    {/* B1. Chọn người đánh giá */}
+                    <div className="bg-white p-3 rounded-lg border border-gray-200 shadow-sm">
+                        <label className="block text-xs font-bold text-gray-500 uppercase mb-1">1. Tên của bạn <span className="text-red-500">*</span></label>
+                        <select value={evaluator} onChange={(e) => setEvaluator(e.target.value)} className="w-full py-1.5 px-2 border-b-2 border-purple-400 outline-none text-purple-900 font-bold bg-transparent">
+                            <option value="">-- Click chọn --</option>
+                            {students.map(s => <option key={s.id} value={`${s.name} (${s.code})`}>{s.name}</option>)}
+                            <option value="Giảng Viên / Khách">Giảng Viên / Khác</option>
+                        </select>
+                    </div>
+
+                    {/* B2. Chọn loại đánh giá */}
+                    <div className="bg-white p-3 rounded-lg border border-gray-200 shadow-sm">
+                        <label className="block text-xs font-bold text-gray-500 uppercase mb-1">2. Loại đánh giá <span className="text-red-500">*</span></label>
+                        <select value={evalType} onChange={(e) => setEvalType(e.target.value)} className="w-full py-1.5 px-2 border-b-2 border-blue-400 outline-none text-blue-900 font-bold bg-transparent">
+                            <option value="teamwork">Làm Việc Nhóm (Quá trình)</option>
+                            <option value="discussion">Thảo Luận Lớp (Seminar/Hỏi đáp)</option>
+                        </select>
+                    </div>
+
+                    {/* B3. Chọn nhóm để đánh giá */}
+                    <div className="bg-white p-3 rounded-lg border border-gray-200 shadow-sm">
+                        <label className="block text-xs font-bold text-gray-500 uppercase mb-1">3. Nhóm được đánh giá <span className="text-red-500">*</span></label>
+                        <select value={targetGroup} onChange={(e) => setTargetGroup(parseInt(e.target.value))} className="w-full py-1.5 px-2 border-b-2 border-green-400 outline-none text-green-900 font-bold bg-transparent">
+                            <option value={1}>Nhóm 1 - 1 Cá Vàng (4 SV)</option>
+                            <option value={2}>Nhóm 2 - Trà Tam Hảo (3 SV)</option>
+                            <option value={3}>Nhóm 3 - Trai Đẹp (4 SV)</option>
+                            <option value={4}>Nhóm 4 - Phúc Lộc Thọ (3 SV)</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+
+            {/* Bảng chấm điểm động */}
+            <div className="p-6">
+                <div className="flex items-center gap-2 mb-4 bg-blue-50 p-3 rounded text-blue-800 text-sm border border-blue-100">
+                    <CheckCircle size={16} className="text-green-600"/>
+                    <span>Đang hiển thị bảng điểm <strong>{evalType === 'teamwork' ? 'Làm Việc Nhóm' : 'Thảo Luận Trên Lớp'}</strong> cho <strong>Nhóm {targetGroup}</strong>. Điểm tối đa mỗi ô: <strong>2.5đ</strong></span>
+                </div>
+                
+                <div className="overflow-x-auto border rounded-lg shadow-sm">
+                    <table className="min-w-full text-sm">
+                        <thead className="bg-gray-800 text-white font-bold text-xs">
+                            <tr>
+                                <th className="p-3 text-left min-w-[200px] border-r border-gray-600">TIÊU CHÍ \ SINH VIÊN</th>
+                                {targetStudents.map(s => {
+                                    const parts = s.name.split(' ');
+                                    const shortName = parts.length > 1 ? parts.slice(-2).join(' ') : s.name;
+                                    return (
+                                        <th key={s.id} className="p-2 text-center w-28 min-w-[100px] border-l border-gray-600">
+                                            <div className="text-sm">{shortName}</div>
+                                            <div className="text-[10px] text-gray-300 font-normal mt-0.5">{s.code} {s.role === 'NT' && <span className="bg-yellow-400 text-yellow-900 px-1 rounded ml-1">NT</span>}</div>
+                                        </th>
+                                    )
+                                })}
+                            </tr>
+                        </thead>
+                        <tbody className="divide-y divide-gray-200">
+                            {currentCriteria.map((criteria, cIdx) => (
+                                <tr key={cIdx} className="hover:bg-purple-50 transition">
+                                    <td className="p-3 text-xs md:text-sm text-gray-800 bg-gray-50 border-r font-medium">{criteria}</td>
+                                    {targetStudents.map(s => (
+                                        <td key={s.id} className="p-1.5 text-center border-l border-gray-100">
+                                            <input 
+                                                type="number" step="0.5" min="0" max="2.5" 
+                                                value={peerScores[`${evalType}_${s.code}_${cIdx}`] ?? ''}
+                                                onChange={(e) => handlePeerScoreChange(s.code, cIdx, e.target.value)}
+                                                className="w-full p-2 text-center text-sm md:text-base rounded focus:bg-white border border-gray-300 focus:border-purple-500 outline-none font-bold text-purple-900" 
+                                            />
+                                        </td>
+                                    ))}
+                                </tr>
+                            ))}
+                        </tbody>
+                        <tfoot className="bg-purple-100 font-bold text-purple-900 border-t-2 border-purple-300">
+                            <tr>
+                                <td className="p-3 text-right border-r uppercase text-xs md:text-sm">Tổng Điểm (Max 10đ):</td>
+                                {targetStudents.map(s => {
+                                    const total = getPeerTotal(s.code);
+                                    return (
+                                        <td key={s.id} className={`p-2 text-center border-l border-purple-200 text-lg ${total > 10 ? 'text-red-600' : ''}`}>
+                                            {total}
+                                        </td>
+                                    )
+                                })}
+                            </tr>
+                        </tfoot>
+                    </table>
+                </div>
+
+                {/* Bottom Actions */}
+                <div className="flex flex-col md:flex-row gap-4 justify-between items-center pt-6 mt-6 border-t border-gray-200">
+                    <button onClick={handleClearPeerData} className="text-gray-400 hover:text-red-500 text-sm font-medium transition">
+                        Xóa làm lại bảng này
+                    </button>
+                    <div className="flex gap-3 w-full md:w-auto">
+                        <Button onClick={submitPeerEvaluation} disabled={isSyncingAll} className="w-full md:w-auto bg-purple-700 hover:bg-purple-800 text-white shadow-lg py-3 px-6 text-base">
+                            {isSyncingAll ? <Loader className="animate-spin" size={20}/> : <Save size={20}/>}
+                            Gửi Bảng Đánh Giá Nhóm {targetGroup}
+                        </Button>
+                    </div>
+                </div>
+            </div>
+        </Card>
+    );
+  }; // <--- LƯU Ý DẤU ĐÓNG NGOẶC CỦA HÀM ĐÁNH GIÁ CHÉO NẰM Ở ĐÂY
+
+
+  // ==========================================
+  // 2. View: Tab Phiếu bài tập Buổi 2
+  // ==========================================
   const renderWorksheetSession2 = () => {
     const colA = [
       { id: 1, text: "1. Feldspar (Tràng thạch)", ans: 'D' },
@@ -693,189 +817,3 @@ export default function App() {
       </div>
     );
   };
-    return (
-        <Card className="overflow-hidden border-2 border-purple-300 shadow-lg">
-            {/* Header Form */}
-            <div className="p-6 bg-gradient-to-r from-purple-50 to-white border-b border-purple-100 flex flex-col gap-4">
-                <div className="flex justify-between items-center mb-2">
-                    <h2 className="text-xl font-bold text-purple-900 flex items-center"><Users className="mr-2"/> Form Đánh Giá Sinh Viên</h2>
-                    <Button variant="outline" className="bg-white border-purple-500 text-purple-700 hover:bg-purple-100 text-xs py-1" onClick={() => setShowRubricModal(true)}>
-                        <Info size={14}/> Tiêu chí
-                    </Button>
-                </div>
-
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                    {/* B1. Chọn người đánh giá */}
-                    <div className="bg-white p-3 rounded-lg border border-gray-200 shadow-sm">
-                        <label className="block text-xs font-bold text-gray-500 uppercase mb-1">1. Tên của bạn <span className="text-red-500">*</span></label>
-                        <select value={evaluator} onChange={(e) => setEvaluator(e.target.value)} className="w-full py-1.5 px-2 border-b-2 border-purple-400 outline-none text-purple-900 font-bold bg-transparent">
-                            <option value="">-- Click chọn --</option>
-                            {students.map(s => <option key={s.id} value={`${s.name} (${s.code})`}>{s.name}</option>)}
-                            <option value="Giảng Viên / Khách">Giảng Viên / Khác</option>
-                        </select>
-                    </div>
-
-                    {/* B2. Chọn loại đánh giá */}
-                    <div className="bg-white p-3 rounded-lg border border-gray-200 shadow-sm">
-                        <label className="block text-xs font-bold text-gray-500 uppercase mb-1">2. Loại đánh giá <span className="text-red-500">*</span></label>
-                        <select value={evalType} onChange={(e) => setEvalType(e.target.value)} className="w-full py-1.5 px-2 border-b-2 border-blue-400 outline-none text-blue-900 font-bold bg-transparent">
-                            <option value="teamwork">Làm Việc Nhóm (Quá trình)</option>
-                            <option value="discussion">Thảo Luận Lớp (Seminar/Hỏi đáp)</option>
-                        </select>
-                    </div>
-
-                    {/* B3. Chọn nhóm để đánh giá */}
-                    <div className="bg-white p-3 rounded-lg border border-gray-200 shadow-sm">
-                        <label className="block text-xs font-bold text-gray-500 uppercase mb-1">3. Nhóm được đánh giá <span className="text-red-500">*</span></label>
-                        <select value={targetGroup} onChange={(e) => setTargetGroup(parseInt(e.target.value))} className="w-full py-1.5 px-2 border-b-2 border-green-400 outline-none text-green-900 font-bold bg-transparent">
-                            <option value={1}>Nhóm 1 - 1 Cá Vàng (4 SV)</option>
-                            <option value={2}>Nhóm 2 - Trà Tam Hảo (3 SV)</option>
-                            <option value={3}>Nhóm 3 - Trai Đẹp (4 SV)</option>
-                            <option value={4}>Nhóm 4 - Phúc Lộc Thọ (3 SV)</option>
-                        </select>
-                    </div>
-                </div>
-            </div>
-
-            {/* Bảng chấm điểm động */}
-            <div className="p-6">
-                <div className="flex items-center gap-2 mb-4 bg-blue-50 p-3 rounded text-blue-800 text-sm border border-blue-100">
-                    <CheckCircle size={16} className="text-green-600"/>
-                    <span>Đang hiển thị bảng điểm <strong>{evalType === 'teamwork' ? 'Làm Việc Nhóm' : 'Thảo Luận Trên Lớp'}</strong> cho <strong>Nhóm {targetGroup}</strong>. Điểm tối đa mỗi ô: <strong>2.5đ</strong></span>
-                </div>
-                
-                <div className="overflow-x-auto border rounded-lg shadow-sm">
-                    <table className="min-w-full text-sm">
-                        <thead className="bg-gray-800 text-white font-bold text-xs">
-                            <tr>
-                                <th className="p-3 text-left min-w-[200px] border-r border-gray-600">TIÊU CHÍ \ SINH VIÊN</th>
-                                {targetStudents.map(s => {
-                                    const parts = s.name.split(' ');
-                                    const shortName = parts.length > 1 ? parts.slice(-2).join(' ') : s.name;
-                                    return (
-                                        <th key={s.id} className="p-2 text-center w-28 min-w-[100px] border-l border-gray-600">
-                                            <div className="text-sm">{shortName}</div>
-                                            <div className="text-[10px] text-gray-300 font-normal mt-0.5">{s.code} {s.role === 'NT' && <span className="bg-yellow-400 text-yellow-900 px-1 rounded ml-1">NT</span>}</div>
-                                        </th>
-                                    )
-                                })}
-                            </tr>
-                        </thead>
-                        <tbody className="divide-y divide-gray-200">
-                            {currentCriteria.map((criteria, cIdx) => (
-                                <tr key={cIdx} className="hover:bg-purple-50 transition">
-                                    <td className="p-3 text-xs md:text-sm text-gray-800 bg-gray-50 border-r font-medium">{criteria}</td>
-                                    {targetStudents.map(s => (
-                                        <td key={s.id} className="p-1.5 text-center border-l border-gray-100">
-                                            <input 
-                                                type="number" step="0.5" min="0" max="2.5" 
-                                                value={peerScores[`${evalType}_${s.code}_${cIdx}`] ?? ''}
-                                                onChange={(e) => handlePeerScoreChange(s.code, cIdx, e.target.value)}
-                                                className="w-full p-2 text-center text-sm md:text-base rounded focus:bg-white border border-gray-300 focus:border-purple-500 outline-none font-bold text-purple-900" 
-                                            />
-                                        </td>
-                                    ))}
-                                </tr>
-                            ))}
-                        </tbody>
-                        <tfoot className="bg-purple-100 font-bold text-purple-900 border-t-2 border-purple-300">
-                            <tr>
-                                <td className="p-3 text-right border-r uppercase text-xs md:text-sm">Tổng Điểm (Max 10đ):</td>
-                                {targetStudents.map(s => {
-                                    const total = getPeerTotal(s.code);
-                                    return (
-                                        <td key={s.id} className={`p-2 text-center border-l border-purple-200 text-lg ${total > 10 ? 'text-red-600' : ''}`}>
-                                            {total}
-                                        </td>
-                                    )
-                                })}
-                            </tr>
-                        </tfoot>
-                    </table>
-                </div>
-
-                {/* Bottom Actions */}
-                <div className="flex flex-col md:flex-row gap-4 justify-between items-center pt-6 mt-6 border-t border-gray-200">
-                    <button onClick={handleClearPeerData} className="text-gray-400 hover:text-red-500 text-sm font-medium transition">
-                        Xóa làm lại bảng này
-                    </button>
-                    <div className="flex gap-3 w-full md:w-auto">
-                        <Button onClick={submitPeerEvaluation} disabled={isSyncingAll} className="w-full md:w-auto bg-purple-700 hover:bg-purple-800 text-white shadow-lg py-3 px-6 text-base">
-                            {isSyncingAll ? <Loader className="animate-spin" size={20}/> : <Save size={20}/>}
-                            Gửi Bảng Đánh Giá Nhóm {targetGroup}
-                        </Button>
-                    </div>
-                </div>
-            </div>
-        </Card>
-    );
-  }
-
-  return (
-    <div className="min-h-screen bg-gray-100 font-sans text-gray-800 pb-10">
-      {renderStatusToast()}
-      {renderRubricModal()}
-      
-      {/* HEADER DÀNH CHO GIẢNG VIÊN */}
-      <header className="bg-white shadow-sm sticky top-0 z-20">
-        <div className="max-w-6xl mx-auto px-4 h-16 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className="bg-blue-600 text-white p-2 rounded-lg"><Layout size={24} /></div>
-            <div>
-              <h1 className="font-bold text-xl leading-tight text-gray-900 hidden md:block">Hệ thống Quản lý GEO10065</h1>
-              <h1 className="font-bold text-lg leading-tight text-gray-900 md:hidden">GEO10065</h1>
-              <p className="text-xs text-gray-500">ThS. Đinh Quốc Tuấn</p>
-            </div>
-          </div>
-          
-          <div className="flex items-center gap-3">
-             <div className="hidden sm:flex items-center bg-blue-50 border border-blue-200 rounded-lg px-2 py-1">
-                <Calendar size={16} className="text-blue-600 mr-2"/>
-                <select className="bg-transparent font-bold text-blue-800 text-sm outline-none cursor-pointer" value={currentSessionIdx} onChange={(e) => { setCurrentSessionIdx(parseInt(e.target.value)); setCurrentStage(0); }}>
-                  {courseSessions.map((s, idx) => <option key={s.id} value={idx}>Buổi {s.id}</option>)}
-                </select>
-             </div>
-
-             <div className="flex items-center gap-2">
-               <input type="text" placeholder="Link App Script (Chỉ GV)" className="text-xs border border-gray-300 rounded px-2 py-1.5 w-24 md:w-40 focus:outline-blue-500" value={scriptUrl} onChange={(e) => setScriptUrl(e.target.value)} title="Chỉ dành cho Giảng Viên đồng bộ bảng điểm chính" />
-               <Button variant="success" onClick={handleSyncAll} disabled={isSyncingAll || !scriptUrl} className="py-1.5 px-3 text-xs md:text-sm whitespace-nowrap" title="Đồng bộ điểm lớp học lên Sheet GV">
-                  {isSyncingAll ? <Loader className="animate-spin" size={14}/> : <Save size={14}/>}
-                  <span className="hidden md:inline">Đồng bộ Lớp</span>
-               </Button>
-            </div>
-          </div>
-        </div>
-      </header>
-
-      <main className="max-w-6xl mx-auto px-4 py-6">
-        {/* MENU */}
-        <div className="flex flex-wrap gap-2 mb-6">
-          <button onClick={() => setActiveTab('dashboard')} className={`px-4 py-2.5 rounded-full font-medium text-sm flex items-center gap-2 transition-colors ${activeTab === 'dashboard' ? 'bg-gray-900 text-white shadow-md' : 'bg-white text-gray-600 hover:bg-gray-200'}`}>
-            <Layout size={16}/> Điều khiển
-          </button>
-          <button onClick={() => setActiveTab('worksheet')} className={`px-4 py-2.5 rounded-full font-medium text-sm flex items-center gap-2 transition-colors ${activeTab === 'worksheet' ? 'bg-orange-600 text-white shadow-md' : 'bg-white text-gray-600 hover:bg-gray-200 border border-orange-200'}`}>
-            <FileText size={16} className={activeTab === 'worksheet' ? 'text-white' : 'text-orange-600'}/> Phiếu Bài Tập (B.2)
-          </button>
-          <button onClick={() => setActiveTab('attendance')} className={`px-4 py-2.5 rounded-full font-medium text-sm flex items-center gap-2 transition-colors ${activeTab === 'attendance' ? 'bg-blue-600 text-white shadow-md' : 'bg-white text-gray-600 hover:bg-gray-200'}`}>
-            <CheckSquare size={16}/> Điểm danh
-          </button>
-          <button onClick={() => setActiveTab('scoring')} className={`px-4 py-2.5 rounded-full font-medium text-sm flex items-center gap-2 transition-colors ${activeTab === 'scoring' ? 'bg-green-600 text-white shadow-md' : 'bg-white text-gray-600 hover:bg-gray-200'}`}>
-            <Trophy size={16}/> Điểm GV (60%)
-          </button>
-          <button onClick={() => setActiveTab('peerReview')} className={`px-4 py-2.5 rounded-full font-medium text-sm flex items-center gap-2 transition-colors ${activeTab === 'peerReview' ? 'bg-purple-600 text-white shadow-md' : 'bg-white text-gray-600 hover:bg-gray-200 border border-purple-200'}`}>
-            <Users size={16} className={activeTab === 'peerReview' ? 'text-white' : 'text-purple-600'}/> SV Đánh Giá Chéo
-          </button>
-        </div>
-
-        {/* CONTENT */}
-        <div className="animate-fade-in">
-          {activeTab === 'dashboard' && renderDashboard()}
-          {activeTab === 'attendance' && renderAttendance()}
-          {activeTab === 'scoring' && renderScoring()}
-          {activeTab === 'peerReview' && renderPeerReview()}
-          {activeTab === 'worksheet' && renderWorksheetSession2()}
-        </div>
-      </main>
-    </div>
-  );
-}
